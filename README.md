@@ -85,7 +85,7 @@ ecomer/
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/yourusername/ecomer.git
+git clone https://github.com/YOUR_USERNAME/ecomer.git
 cd ecomer
 ```
 
@@ -236,39 +236,40 @@ We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for 
 Love OpenShop? Consider supporting our development:
 
 - ⭐ **Star us on GitHub** - It helps others discover the project
-- � **Sponsor us** - [GitHub Sponsors](https://github.com/sponsors/yourusername)
+- 💝 **Sponsor us** - [GitHub Sponsors](https://github.com/sponsors)
 - 🐛 **Report issues** - Help us improve
 - 📢 **Spread the word** - Share with your network
 
-### Current Sponsors
+### How to Become a Sponsor
 
-#### 🏆 Platinum Sponsors
-- **TechCorp Solutions** - Enterprise e-commerce solutions
-- **Digital Innovations Ltd** - Digital transformation partner
+We welcome sponsors at all levels! Your support helps us maintain and improve OpenShop.
 
-#### 🥈 Gold Sponsors  
-- **WebDev Agency** - Web development and design
-- **CloudHost Pro** - Cloud hosting services
-- **DevTools Inc** - Developer tools and platforms
+#### 🏆 Platinum Sponsors ($500+/month)
+- Featured placement in README
+- Logo on our website
+- Priority support
+- Custom integration opportunities
 
-#### 🥉 Silver Sponsors
-- **StartupHub** - Supporting open source startups
-- **CodeMasters** - Quality code solutions
-- **PixelPerfect** - UI/UX design agency
+#### 🥈 Gold Sponsors ($200+/month)
+- Featured placement in README
+- Logo on our website
+- Priority support
 
-#### ⭐ Bronze Sponsors
-- **DevFusion** - Developer community platform
-- **TechGrowth** - Technology growth partner
-- **CloudScale** - Scalable cloud solutions
+#### 🥉 Silver Sponsors ($50+/month)
+- Logo placement in README
+- Mention in release notes
 
-[![Sponsors](https://opencollective.com/openshop/tiers/sponsor.svg?avatarHeight=36)](https://opencollective.com/openshop)
-[![Backers](https://opencollective.com/openshop/tiers/backer.svg?avatarHeight=36)](https://opencollective.com/openshop)
+#### ⭐ Bronze Sponsors ($10+/month)
+- Name recognition in README
+- Our eternal gratitude
+
+To become a sponsor, please visit our [GitHub Sponsors page](https://github.com/sponsors) or contact us directly.
 
 ## �� Support
 
 - 📧 Email: support@openshop.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/ecomer/issues)
-- � Discussions: [GitHub Discussions](https://github.com/yourusername/ecomer/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/YOUR_USERNAME/ecomer/issues)
+- 🤝 Discussions: [GitHub Discussions](https://github.com/YOUR_USERNAME/ecomer/discussions)
 - 🎮 Discord: [Join our community](https://discord.gg/openshop)
 
 ## 📄 License
