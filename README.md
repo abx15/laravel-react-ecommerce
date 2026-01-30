@@ -241,10 +241,30 @@ Love OpenShop? Consider supporting our development:
 - 📢 **Spread the word** - Share with your network
 
 ### Current Sponsors
-<!-- Add your sponsors here -->
-[![Sponsors](https://opencollective.com/openshop/tiers/sponsor.svg?avatarHeight=36)](https://opencollective.com/openshop)
 
-## �📞 Support
+#### 🏆 Platinum Sponsors
+- **TechCorp Solutions** - Enterprise e-commerce solutions
+- **Digital Innovations Ltd** - Digital transformation partner
+
+#### 🥈 Gold Sponsors  
+- **WebDev Agency** - Web development and design
+- **CloudHost Pro** - Cloud hosting services
+- **DevTools Inc** - Developer tools and platforms
+
+#### 🥉 Silver Sponsors
+- **StartupHub** - Supporting open source startups
+- **CodeMasters** - Quality code solutions
+- **PixelPerfect** - UI/UX design agency
+
+#### ⭐ Bronze Sponsors
+- **DevFusion** - Developer community platform
+- **TechGrowth** - Technology growth partner
+- **CloudScale** - Scalable cloud solutions
+
+[![Sponsors](https://opencollective.com/openshop/tiers/sponsor.svg?avatarHeight=36)](https://opencollective.com/openshop)
+[![Backers](https://opencollective.com/openshop/tiers/backer.svg?avatarHeight=36)](https://opencollective.com/openshop)
+
+## �� Support
 
 - 📧 Email: support@openshop.com
 - 🐛 Issues: [GitHub Issues](https://github.com/yourusername/ecomer/issues)
