@@ -25,6 +25,7 @@ const Navbar = () => {
                             {user.roles && user.roles.some(r => r.name === 'admin' || r.name === 'super_admin') && (
                                 <Link to="/admin" className="text-gray-600 hover:text-blue-600">Admin</Link>
                             )}
+                            <Link to="/profile" className="text-gray-600 hover:text-blue-600">Profile</Link>
                             <Link to="/cart" className="text-gray-600 hover:text-blue-600 relative">
                                 <FaShoppingCart className="text-xl" />
                                 {/* Badge could go here */}

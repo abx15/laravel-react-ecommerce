@@ -41,5 +41,11 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
         $user->assignRole($userRole);
+
+        // Seed categories and products
+        $this->call([
+            CategorySeeder::class,
+            ProductSeeder::class,
+        ]);
     }
 }

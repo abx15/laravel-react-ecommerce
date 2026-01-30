@@ -5,10 +5,14 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 
 import Home from './pages/Home';
+import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import OrderSuccess from './pages/OrderSuccess';
+import Profile from './pages/Profile';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -34,6 +38,7 @@ function App() {
           <Route element={<Layout />}>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
+            <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -44,9 +49,24 @@ function App() {
                 <Dashboard />
               </ProtectedRoute>
             } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
             <Route path="/cart" element={
               <ProtectedRoute>
                 <Cart />
+              </ProtectedRoute>
+            } />
+            <Route path="/checkout" element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            } />
+            <Route path="/order-success" element={
+              <ProtectedRoute>
+                <OrderSuccess />
               </ProtectedRoute>
             } />
 
