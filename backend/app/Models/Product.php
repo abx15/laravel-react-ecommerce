@@ -16,6 +16,7 @@ class Product extends Model
         'price',
         'stock',
         'category_id',
+        'seller_id',
         'is_active'
     ];
 
@@ -27,5 +28,15 @@ class Product extends Model
     public function images()
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    public function seller()
+    {
+        return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
     }
 }

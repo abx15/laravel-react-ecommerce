@@ -10,6 +10,10 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\SellerDashboardController;
+use App\Http\Controllers\UserDashboardController;
 
 // Public Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -56,5 +60,48 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/seller/products', [ProductController::class, 'store']);
         Route::put('/seller/products/{product}', [ProductController::class, 'update']);
         Route::delete('/seller/products/{product}', [ProductController::class, 'destroy']);
+        
+        // Seller Dashboard Routes
+        Route::get('/seller/dashboard', [SellerDashboardController::class, 'dashboard']);
+        Route::get('/seller/orders', [SellerDashboardController::class, 'getOrders']);
+        Route::get('/seller/products-list', [SellerDashboardController::class, 'getProducts']);
+        Route::patch('/seller/orders/{order}/status', [SellerDashboardController::class, 'updateOrderStatus']);
+    });
+
+    // User Dashboard Routes
+    Route::middleware(['role:user'])->group(function () {
+        Route::get('/user/dashboard', [UserDashboardController::class, 'dashboard']);
+        Route::get('/user/orders', [UserDashboardController::class, 'getOrders']);
+        Route::get('/user/orders/{order}', [UserDashboardController::class, 'getOrder']);
+        Route::get('/user/profile', [UserDashboardController::class, 'getProfile']);
+        Route::put('/user/profile', [UserDashboardController::class, 'updateProfile']);
+    });
+
+    // Admin Dashboard Routes
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/admin/dashboard', [AdminDashboardController::class, 'dashboard']);
+        Route::get('/admin/seller-requests', [AdminDashboardController::class, 'getSellerRequests']);
+        Route::get('/admin/orders-list', [AdminDashboardController::class, 'getOrders']);
+        Route::get('/admin/products-list', [AdminDashboardController::class, 'getProducts']);
+        Route::get('/admin/categories-list', [AdminDashboardController::class, 'getCategories']);
+        Route::patch('/admin/sellers/{id}/approve', [AdminDashboardController::class, 'approveSeller']);
+        Route::patch('/admin/sellers/{id}/reject', [AdminDashboardController::class, 'rejectSeller']);
+    });
+
+    // Super Admin Dashboard Routes
+    Route::middleware(['role:super_admin'])->group(function () {
+        Route::get('/super-admin/dashboard', [SuperAdminController::class, 'dashboard']);
+        Route::get('/super-admin/users', [SuperAdminController::class, 'getUsers']);
+        Route::get('/super-admin/admins', [SuperAdminController::class, 'getAdmins']);
+        Route::get('/super-admin/sellers', [SuperAdminController::class, 'getSellers']);
+        Route::get('/super-admin/all-orders', [SuperAdminController::class, 'getAllOrders']);
+        Route::get('/super-admin/system-settings', [SuperAdminController::class, 'getSystemSettings']);
+        
+        Route::post('/super-admin/admins', [SuperAdminController::class, 'createAdmin']);
+        Route::patch('/super-admin/sellers/{id}/approve', [SuperAdminController::class, 'approveSeller']);
+        Route::patch('/super-admin/sellers/{id}/reject', [SuperAdminController::class, 'rejectSeller']);
+        Route::patch('/super-admin/users/{id}/block', [SuperAdminController::class, 'blockUser']);
+        Route::patch('/super-admin/users/{id}/unblock', [SuperAdminController::class, 'unblockUser']);
+        Route::delete('/super-admin/admins/{id}', [SuperAdminController::class, 'deleteAdmin']);
     });
 });

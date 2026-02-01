@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const AuthContext = createContext({
@@ -15,14 +16,35 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (token) {
             // Validate token and fetch user
-            api.defaults.headers.Authorization = `Bearer ${token}`; // Ensure axios has token
+            api.defaults.headers.Authorization = `Bearer ${token}`;
             api.get('/user')
                 .then(res => {
                     setUser(res.data.data);
+                    // Auto-redirect based on role
+                    const userRole = res.data.data.roles?.[0]?.name;
+                    if (userRole) {
+                        switch (userRole) {
+                            case 'super_admin':
+                                navigate('/super-admin');
+                                break;
+                            case 'admin':
+                                navigate('/admin');
+                                break;
+                            case 'seller':
+                                navigate('/seller/dashboard');
+                                break;
+                            case 'user':
+                                navigate('/dashboard');
+                                break;
+                            default:
+                                navigate('/');
+                        }
+                    }
                 })
                 .catch(() => {
                     localStorage.removeItem('token');
@@ -33,7 +55,7 @@ export const AuthProvider = ({ children }) => {
         } else {
             setLoading(false);
         }
-    }, [token]);
+    }, [token, navigate]);
 
     const login = async (email, password) => {
         const res = await api.post('/login', { email, password });
@@ -41,6 +63,28 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('token', res.data.data.token);
             setToken(res.data.data.token);
             setUser(res.data.data.user);
+            
+            // Redirect based on role
+            const userRole = res.data.data.user.roles?.[0]?.name;
+            if (userRole) {
+                switch (userRole) {
+                    case 'super_admin':
+                        navigate('/super-admin');
+                        break;
+                    case 'admin':
+                        navigate('/admin');
+                        break;
+                    case 'seller':
+                        navigate('/seller/dashboard');
+                        break;
+                    case 'user':
+                        navigate('/dashboard');
+                        break;
+                    default:
+                        navigate('/');
+                }
+            }
+            
             return res.data;
         }
     };
@@ -51,6 +95,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('token', res.data.data.token);
             setToken(res.data.data.token);
             setUser(res.data.data.user);
+            navigate('/dashboard');
             return res.data;
         }
     };
@@ -64,6 +109,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('token');
             setToken(null);
             setUser(null);
+            navigate('/login');
         }
     };
 

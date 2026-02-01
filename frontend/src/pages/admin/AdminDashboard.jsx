@@ -1,7 +1,5 @@
 import React from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const StatCard = ({ title, value, icon, color }) => (
   <div className={`${color} rounded-lg p-6 text-white`}>
@@ -17,7 +15,7 @@ const StatCard = ({ title, value, icon, color }) => (
   </div>
 );
 
-const SellerDashboard = () => {
+const AdminDashboard = () => {
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
 
@@ -25,7 +23,7 @@ const SellerDashboard = () => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/seller/dashboard', {
+        const response = await fetch('/api/admin/dashboard', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -62,84 +60,73 @@ const SellerDashboard = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="bg-white rounded-lg shadow-sm p-6 border-b">
-        <h1 className="text-3xl font-bold text-gray-900">Seller Dashboard</h1>
-        <p className="text-gray-600 mt-2">Manage your products and track sales</p>
+        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p className="text-gray-600 mt-2">Platform management and analytics</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          title="My Products" 
-          value={stats.my_products_count.toLocaleString()} 
+          title="Total Orders" 
+          value={stats.total_orders.toLocaleString()} 
           icon="📦"
           color="bg-blue-600"
         />
         <StatCard 
-          title="My Orders" 
-          value={stats.my_orders.toLocaleString()} 
-          icon="🛒"
+          title="Revenue" 
+          value={`$${stats.revenue.toLocaleString()}`} 
+          icon="💰"
           color="bg-green-600"
         />
         <StatCard 
-          title="My Revenue" 
-          value={`$${stats.my_revenue.toLocaleString()}`} 
-          icon="💰"
+          title="Total Products" 
+          value={stats.total_products.toLocaleString()} 
+          icon="📦"
           color="bg-purple-600"
         />
         <StatCard 
-          title="Active Listings" 
-          value={stats.my_products_count.toLocaleString()} 
-          icon="📋"
+          title="Pending Sellers" 
+          value={stats.pending_sellers.toLocaleString()} 
+          icon="⏳"
           color="bg-orange-600"
         />
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Order Status Breakdown */}
+        {/* Daily Orders Chart */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Status Breakdown</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Daily Orders (Last 7 Days)</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={charts.order_status_breakdown}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="count"
-              >
-                {charts.order_status_breakdown.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
+            <BarChart data={charts.daily_orders}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
               <Tooltip />
-            </PieChart>
+              <Legend />
+              <Bar dataKey="orders" fill="#3B82F6" name="Orders" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Sales Over Time */}
+        {/* Revenue Trend Chart */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Sales Over Time (Last 30 Days)</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Revenue Trend (Last 30 Days)</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={charts.sales_over_time}>
+            <LineChart data={charts.revenue_trend}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip />
+              <YAxis />
+              <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
               <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="sales" stroke="#3B82F6" strokeWidth={2} />
-              <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={2} />
+              <Line type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Top Selling Products */}
+        {/* Product Performance Table */}
         <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Top Selling Products</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Performing Products</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -148,11 +135,10 @@ const SellerDashboard = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {charts.top_selling_products.map((product, index) => (
+                {charts.product_performance.map((product, index) => (
                   <tr key={index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {product.name}
@@ -165,9 +151,6 @@ const SellerDashboard = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       ${product.price}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ${(product.order_items_count * product.price).toLocaleString()}
                     </td>
                   </tr>
                 ))}
@@ -182,13 +165,13 @@ const SellerDashboard = () => {
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-            Add New Product
+            View Seller Requests
           </button>
           <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-            View Orders
+            Manage Products
           </button>
           <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-            Manage Products
+            View All Orders
           </button>
         </div>
       </div>
@@ -196,4 +179,4 @@ const SellerDashboard = () => {
   );
 };
 
-export default SellerDashboard;
+export default AdminDashboard;

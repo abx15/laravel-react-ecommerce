@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './layouts/Layout';
+import DashboardLayout from './layouts/DashboardLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import BecomeSeller from './pages/auth/BecomeSeller';
@@ -17,6 +18,9 @@ import Profile from './pages/Profile';
 
 import SellerDashboard from './pages/seller/SellerDashboard';
 import ProductForm from './pages/seller/ProductForm';
+import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
+import AdminDashboardNew from './pages/admin/AdminDashboard';
+import UserDashboard from './pages/user/UserDashboard';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -36,8 +40,8 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <Routes>
           <Route element={<Layout />}>
             {/* Public Routes */}
@@ -55,58 +59,85 @@ function App() {
 
             {/* User Routes */}
             <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
+              <ProtectedRoute roles={['user']}>
+                <DashboardLayout>
+                  <UserDashboard />
+                </DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/profile" element={
               <ProtectedRoute>
-                <Profile />
+                <Layout>
+                  <Profile />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/cart" element={
               <ProtectedRoute>
-                <Cart />
+                <Layout>
+                  <Cart />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/checkout" element={
               <ProtectedRoute>
-                <Checkout />
+                <Layout>
+                  <Checkout />
+                </Layout>
               </ProtectedRoute>
             } />
             <Route path="/order-success" element={
               <ProtectedRoute>
-                <OrderSuccess />
+                <Layout>
+                  <OrderSuccess />
+                </Layout>
               </ProtectedRoute>
             } />
 
-            {/* Admin Routes */}
+            {/* Admin Dashboard Routes */}
             <Route path="/admin" element={
-              <ProtectedRoute roles={['admin', 'super_admin']}>
-                <AdminDashboard />
+              <ProtectedRoute roles={['admin']}>
+                <DashboardLayout>
+                  <AdminDashboardNew />
+                </DashboardLayout>
               </ProtectedRoute>
             } />
 
-            {/* Seller Routes */}
+            {/* Super Admin Dashboard Routes */}
+            <Route path="/super-admin" element={
+              <ProtectedRoute roles={['super_admin']}>
+                <DashboardLayout>
+                  <SuperAdminDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Seller Dashboard Routes */}
             <Route path="/seller/dashboard" element={
               <ProtectedRoute roles={['seller']}>
-                <SellerDashboard />
+                <DashboardLayout>
+                  <SellerDashboard />
+                </DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/seller/products/create" element={
               <ProtectedRoute roles={['seller']}>
-                <ProductForm />
+                <DashboardLayout>
+                  <ProductForm />
+                </DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/seller/products/:id/edit" element={
               <ProtectedRoute roles={['seller']}>
-                <ProductForm />
+                <DashboardLayout>
+                  <ProductForm />
+                </DashboardLayout>
               </ProtectedRoute>
             } />
           </Route>
         </Routes>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
