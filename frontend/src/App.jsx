@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './layouts/Layout';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import BecomeSeller from './pages/auth/BecomeSeller';
 
 import Home from './pages/Home';
 import Products from './pages/Products';
@@ -13,6 +14,9 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import Profile from './pages/Profile';
+
+import SellerDashboard from './pages/seller/SellerDashboard';
+import ProductForm from './pages/seller/ProductForm';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -42,6 +46,12 @@ function App() {
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            <Route path="/become-seller" element={
+              <ProtectedRoute>
+                <BecomeSeller />
+              </ProtectedRoute>
+            } />
 
             {/* User Routes */}
             <Route path="/dashboard" element={
@@ -74,6 +84,23 @@ function App() {
             <Route path="/admin" element={
               <ProtectedRoute roles={['admin', 'super_admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Seller Routes */}
+            <Route path="/seller/dashboard" element={
+              <ProtectedRoute roles={['seller']}>
+                <SellerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/seller/products/create" element={
+              <ProtectedRoute roles={['seller']}>
+                <ProductForm />
+              </ProtectedRoute>
+            } />
+            <Route path="/seller/products/:id/edit" element={
+              <ProtectedRoute roles={['seller']}>
+                <ProductForm />
               </ProtectedRoute>
             } />
           </Route>

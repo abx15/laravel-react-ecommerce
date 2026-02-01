@@ -1,148 +1,148 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 
 const AdminDashboard = () => {
-    const [products, setProducts] = useState([]);
+    const [sellers, setSellers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('products');
-
-    // Simple mock for "Add Product" toggle for now
-    const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '', description: '', price: '', stock: '', category_id: 1 // Default cat ID
-    });
-    const [image, setImage] = useState(null);
-
-    const fetchProducts = useCallback((showLoading = true) => {
-        if (showLoading) setLoading(true);
-        api.get('/products')
-            .then(res => setProducts(res.data.data.data))
-            .catch(console.error)
-            .finally(() => setLoading(false));
-    }, []);
+    const [stats, setStats] = useState({ totalResult: 0, pending: 0, approved: 0 });
 
     useEffect(() => {
-        fetchProducts(false);
-    }, [fetchProducts]);
+        fetchSellers();
+    }, []);
 
-    const handleDelete = async (id) => {
-        if (!confirm('Delete product?')) return;
+    const fetchSellers = async () => {
         try {
-            await api.delete(`/admin/products/${id}`);
-            fetchProducts();
-        } catch (err) {
-            console.error(err);
-            alert('Failed to delete');
+            const response = await api.get('/admin/sellers');
+            setSellers(response.data);
+            calculateStats(response.data);
+        } catch (error) {
+            console.error('Error fetching sellers:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const data = new FormData();
-        Object.keys(formData).forEach(key => data.append(key, formData[key]));
-        if (image) data.append('images[]', image);
+    const calculateStats = (data) => {
+        const pending = data.filter(s => s.status === 'pending').length;
+        const approved = data.filter(s => s.status === 'approved').length;
+        setStats({ totalResult: data.length, pending, approved });
+    };
+
+    const handleAction = async (id, action) => {
+        if (!window.confirm(`Are you sure you want to ${action} this seller?`)) return;
 
         try {
-            await api.post('/admin/products', data, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            setShowForm(false);
-            fetchProducts();
-            alert('Product created');
-        } catch (err) {
-            console.error(err);
-            alert('Failed to create product');
+            await api.post(`/admin/sellers/${id}/${action}`);
+
+            // Optimistic update or refetch
+            fetchSellers();
+            alert(`Seller ${action}d successfully`);
+        } catch (error) {
+            console.error(`Error ${action}ing seller:`, error);
+            alert(`Failed to ${action} seller`);
         }
     };
+
+    if (loading) return <div className="p-8 text-center">Loading Dashboard...</div>;
 
     return (
-        <div className="max-w-6xl mx-auto bg-white p-6 shadow-md rounded">
-            <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+        <div className="p-6 bg-background min-h-screen">
+            <h1 className="text-3xl font-bold text-text-heading mb-6">Admin Dashboard</h1>
 
-            <div className="flex border-b mb-6">
-                <button
-                    className={`pb-2 px-4 ${activeTab === 'products' ? 'border-b-2 border-blue-600 font-bold' : ''}`}
-                    onClick={() => setActiveTab('products')}
-                >
-                    Products
-                </button>
-                <button
-                    className={`pb-2 px-4 ${activeTab === 'orders' ? 'border-b-2 border-blue-600 font-bold' : ''}`}
-                    onClick={() => setActiveTab('orders')}
-                >
-                    Orders
-                </button>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-gray-500 text-sm font-medium">Total Sellers</h3>
+                    <p className="text-3xl font-bold text-primary mt-2">{stats.totalResult}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-gray-500 text-sm font-medium">Pending Approvals</h3>
+                    <p className="text-3xl font-bold text-status-warning mt-2">{stats.pending}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-gray-500 text-sm font-medium">Active Selleers</h3>
+                    <p className="text-3xl font-bold text-status-success mt-2">{stats.approved}</p>
+                </div>
             </div>
 
-            {activeTab === 'products' && (
-                <div>
-                    <div className="flex justify-between mb-4">
-                        <h2 className="text-xl font-semibold">Manage Products</h2>
-                        <button
-                            onClick={() => setShowForm(!showForm)}
-                            className="bg-blue-600 text-white px-4 py-2 rounded flex items-center"
-                        >
-                            <FaPlus className="mr-2" /> Add Product
-                        </button>
-                    </div>
-
-                    {showForm && (
-                        <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-4 rounded border">
-                            <div className="grid grid-cols-2 gap-4">
-                                <input placeholder="Name" className="border p-2 rounded" required
-                                    value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                                <input placeholder="Price" type="number" className="border p-2 rounded" required
-                                    value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} />
-                                <input placeholder="Stock" type="number" className="border p-2 rounded" required
-                                    value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} />
-                                <input type="file" className="border p-2 rounded" onChange={e => setImage(e.target.files[0])} />
-                                <textarea placeholder="Description" className="border p-2 rounded col-span-2" required
-                                    value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-                            </div>
-                            <button className="mt-4 bg-green-600 text-white px-4 py-2 rounded">Save Product</button>
-                        </form>
-                    )}
-
-                    {loading ? <p>Loading...</p> : (
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b">
-                                    <th className="py-2">Image</th>
-                                    <th>Name</th>
-                                    <th>Price</th>
-                                    <th>Stock</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {products.map(product => (
-                                    <tr key={product.id} className="border-b">
-                                        <td className="py-2">
-                                            {product.images && product.images.length > 0 && (
-                                                <img src={`http://localhost:8000${product.images[0].image_path}`} className="w-10 h-10 object-cover" />
+            {/* Sellers List */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100">
+                    <h2 className="text-xl font-bold text-text-heading">Seller Verification</h2>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50 text-gray-500 text-sm uppercase">
+                            <tr>
+                                <th className="px-6 py-4 font-medium">Seller Info</th>
+                                <th className="px-6 py-4 font-medium">Shop Details</th>
+                                <th className="px-6 py-4 font-medium">Documents</th>
+                                <th className="px-6 py-4 font-medium">Status</th>
+                                <th className="px-6 py-4 font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {sellers.map((seller) => (
+                                <tr key={seller.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium text-text-heading">{seller.user?.name}</div>
+                                        <div className="text-sm text-gray-500">{seller.user?.email}</div>
+                                        <div className="text-sm text-gray-500">{seller.user?.mobile}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium text-text-heading">{seller.shop_name}</div>
+                                        <div className="text-sm text-gray-500 truncate max-w-xs">{seller.shop_address}</div>
+                                        <div className="text-sm text-gray-500">{seller.city} - {seller.pincode}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <a
+                                            href={`http://localhost:8000/storage/${seller.id_proof_path}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-primary hover:underline text-sm font-medium"
+                                        >
+                                            View ID Proof
+                                        </a>
+                                        {seller.gst_number && (
+                                            <div className="text-xs text-gray-500 mt-1">GST: {seller.gst_number}</div>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`
+                                            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            ${seller.status === 'approved' ? 'bg-green-100 text-green-800' : ''}
+                                            ${seller.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                            ${seller.status === 'rejected' ? 'bg-red-100 text-red-800' : ''}
+                                        `}>
+                                            {seller.status.charAt(0).toUpperCase() + seller.status.slice(1)}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex gap-2">
+                                            {seller.status === 'pending' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleAction(seller.id, 'approve')}
+                                                        className="px-3 py-1 bg-status-success text-white text-sm rounded hover:opacity-90 transition"
+                                                    >
+                                                        Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAction(seller.id, 'reject')}
+                                                        className="px-3 py-1 bg-status-error text-white text-sm rounded hover:opacity-90 transition"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                </>
                                             )}
-                                        </td>
-                                        <td>{product.name}</td>
-                                        <td>₹{product.price}</td>
-                                        <td>{product.stock}</td>
-                                        <td>
-                                            <button onClick={() => handleDelete(product.id)} className="text-red-500"><FaTrash /></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
-            )}
-
-            {activeTab === 'orders' && (
-                <div>
-                    <h2 className="text-xl font-semibold">Recent Orders</h2>
-                    <p className="text-gray-500">Order management view would go here (similar table to user dashboard but with status edit).</p>
-                </div>
-            )}
+            </div>
         </div>
     );
 };
