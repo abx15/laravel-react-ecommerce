@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiEye, FiFilter, FiDownload, FiUpload, FiPackage, FiUsers, FiShoppingCart, FiTrendingUp, FiDollarSign, FiAlertCircle, FiCheckCircle, FiXCircle, FiClock, FiUserPlus, FiShield, FiSettings } from 'react-icons/fi';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import api from '../../services/api';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -30,19 +31,12 @@ const SuperAdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
-
       // Fetch all data in parallel with error handling for each call
       const results = await Promise.allSettled([
-        fetch('/api/super-admin/dashboard', { headers }),
-        fetch('/api/super-admin/admins', { headers }),
-        fetch('/api/super-admin/users', { headers }),
-        fetch('/api/super-admin/sellers', { headers })
+        api.get('/super-admin/dashboard'),
+        api.get('/super-admin/admins'),
+        api.get('/super-admin/users'),
+        api.get('/super-admin/sellers')
       ]);
 
       // Handle each result separately
@@ -58,25 +52,25 @@ const SuperAdminDashboard = () => {
       let sellersData = [];
 
       if (dashboardResult.status === 'fulfilled') {
-        dashboardData = await dashboardResult.value.json();
+        dashboardData = dashboardResult.value.data;
       } else {
         console.error('Dashboard API failed:', dashboardResult.reason);
       }
 
       if (adminsResult.status === 'fulfilled') {
-        adminsData = await adminsResult.value.json();
+        adminsData = adminsResult.value.data;
       } else {
         console.error('Admins API failed:', adminsResult.reason);
       }
 
       if (usersResult.status === 'fulfilled') {
-        usersData = await usersResult.value.json();
+        usersData = usersResult.value.data;
       } else {
         console.error('Users API failed:', usersResult.reason);
       }
 
       if (sellersResult.status === 'fulfilled') {
-        sellersData = await sellersResult.value.json();
+        sellersData = sellersResult.value.data;
       } else {
         console.error('Sellers API failed:', sellersResult.reason);
       }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiEye, FiFilter, FiDownload, FiUpload, FiPackage, FiUsers, FiShoppingCart, FiTrendingUp, FiDollarSign, FiAlertCircle, FiCheckCircle, FiXCircle, FiClock } from 'react-icons/fi';
+import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiCheckCircle, FiXCircle, FiAlertCircle } from 'react-icons/fi';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import api from '../../services/api';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -33,20 +34,13 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
-
       // Fetch all data in parallel with error handling for each call
       const results = await Promise.allSettled([
-        fetch('/api/admin/dashboard', { headers }),
-        fetch('/api/admin/products-list', { headers }),
-        fetch('/api/admin/orders-list', { headers }),
-        fetch('/api/admin/sellers', { headers }),
-        fetch('/api/admin/seller-requests', { headers })
+        api.get('/admin/dashboard'),
+        api.get('/admin/products-list'),
+        api.get('/admin/orders-list'),
+        api.get('/admin/sellers'),
+        api.get('/admin/seller-requests')
       ]);
 
       // Handle each result separately
@@ -64,31 +58,31 @@ const AdminDashboard = () => {
       let sellerRequestsData = [];
 
       if (dashboardResult.status === 'fulfilled') {
-        dashboardData = await dashboardResult.value.json();
+        dashboardData = dashboardResult.value.data;
       } else {
         console.error('Dashboard API failed:', dashboardResult.reason);
       }
 
       if (productsResult.status === 'fulfilled') {
-        productsData = await productsResult.value.json();
+        productsData = productsResult.value.data;
       } else {
         console.error('Products API failed:', productsResult.reason);
       }
 
       if (ordersResult.status === 'fulfilled') {
-        ordersData = await ordersResult.value.json();
+        ordersData = ordersResult.value.data;
       } else {
         console.error('Orders API failed:', ordersResult.reason);
       }
 
       if (sellersResult.status === 'fulfilled') {
-        sellersData = await sellersResult.value.json();
+        sellersData = sellersResult.value.data;
       } else {
         console.error('Sellers API failed:', sellersResult.reason);
       }
 
       if (sellerRequestsResult.status === 'fulfilled') {
-        sellerRequestsData = await sellerRequestsResult.value.json();
+        sellerRequestsData = sellerRequestsResult.value.data;
       } else {
         console.error('Seller requests API failed:', sellerRequestsResult.reason);
       }
@@ -126,17 +120,9 @@ const AdminDashboard = () => {
   const handleAddProduct = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/products', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
+      const response = await api.post('/admin/products', formData);
 
-      if (response.ok) {
+      if (response.data.success) {
         setShowAddProductModal(false);
         setFormData({ name: '', description: '', price: '', category_id: '', stock: '', status: 'active' });
         fetchDashboardData();
@@ -149,17 +135,9 @@ const AdminDashboard = () => {
   const handleEditProduct = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/admin/products/${selectedProduct.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
+      const response = await api.put(`/admin/products/${selectedProduct.id}`, formData);
 
-      if (response.ok) {
+      if (response.data.success) {
         setShowEditProductModal(false);
         setSelectedProduct(null);
         setFormData({ name: '', description: '', price: '', category_id: '', stock: '', status: 'active' });
@@ -173,13 +151,7 @@ const AdminDashboard = () => {
   const handleDeleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        const token = localStorage.getItem('token');
-        await fetch(`/api/admin/products/${productId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          }
-        });
+        await api.delete(`/admin/products/${productId}`);
         fetchDashboardData();
       } catch (error) {
         console.error('Error deleting product:', error);
@@ -189,14 +161,7 @@ const AdminDashboard = () => {
 
   const handleApproveSeller = async (sellerId) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`/api/admin/sellers/${sellerId}/approve`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
+      await api.patch(`/admin/sellers/${sellerId}/approve`);
       fetchDashboardData();
     } catch (error) {
       console.error('Error approving seller:', error);
@@ -207,15 +172,7 @@ const AdminDashboard = () => {
     const reason = prompt('Please enter rejection reason:');
     if (reason) {
       try {
-        const token = localStorage.getItem('token');
-        await fetch(`/api/admin/sellers/${sellerId}/reject`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ rejection_reason: reason })
-        });
+        await api.patch(`/admin/sellers/${sellerId}/reject`, { rejection_reason: reason });
         fetchDashboardData();
       } catch (error) {
         console.error('Error rejecting seller:', error);
@@ -226,13 +183,7 @@ const AdminDashboard = () => {
   const handleBlockSeller = async (userId) => {
     if (window.confirm('Are you sure you want to block this seller?')) {
       try {
-        const token = localStorage.getItem('token');
-        await fetch(`/api/admin/sellers/${userId}/block`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          }
-        });
+        await api.patch(`/admin/sellers/${userId}/block`);
         fetchDashboardData();
       } catch (error) {
         console.error('Error blocking seller:', error);
@@ -242,13 +193,7 @@ const AdminDashboard = () => {
 
   const handleUnblockSeller = async (userId) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`/api/admin/sellers/${userId}/unblock`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
+      await api.patch(`/admin/sellers/${userId}/unblock`);
       fetchDashboardData();
     } catch (error) {
       console.error('Error unblocking seller:', error);
