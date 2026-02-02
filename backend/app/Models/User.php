@@ -22,8 +22,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'user_type',
         'is_verified',
         'is_blocked',
+        'is_seller_verified',
         'seller_id',
     ];
 
@@ -46,9 +48,11 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'seller_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_verified' => 'boolean',
             'is_blocked' => 'boolean',
+            'is_seller_verified' => 'boolean',
         ];
     }
 
@@ -70,5 +74,36 @@ class User extends Authenticatable
     public function sellerProducts()
     {
         return $this->hasMany(Product::class, 'seller_id');
+    }
+
+    public function sellerProfile()
+    {
+        return $this->hasOne(Seller::class);
+    }
+
+    // Role helper methods
+    public function isUser()
+    {
+        return $this->user_type === 'user';
+    }
+
+    public function isSeller()
+    {
+        return $this->user_type === 'seller';
+    }
+
+    public function isAdmin()
+    {
+        return $this->user_type === 'admin';
+    }
+
+    public function isSuperAdmin()
+    {
+        return $this->user_type === 'super_admin';
+    }
+
+    public function hasSellerAccess()
+    {
+        return $this->isSeller() && $this->is_seller_verified;
     }
 }

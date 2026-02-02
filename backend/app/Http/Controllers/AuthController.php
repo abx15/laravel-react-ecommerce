@@ -19,20 +19,31 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'user_type' => 'sometimes|in:user,seller',
         ]);
+
+        $userType = $validated['user_type'] ?? 'user';
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'user_type' => $userType,
         ]);
 
-        $user->assignRole('user');
+        // Assign role based on user type
+        $role = match($userType) {
+            'seller' => 'seller',
+            'admin' => 'admin',
+            'super_admin' => 'super_admin',
+            default => 'user'
+        };
+        $user->assignRole($role);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->success([
-            'user' => $user,
+            'user' => $user->load('roles'),
             'token' => $token,
         ], 'User registered successfully', 201);
     }

@@ -24,9 +24,11 @@ export const AuthProvider = ({ children }) => {
             api.defaults.headers.Authorization = `Bearer ${token}`;
             api.get('/user')
                 .then(res => {
-                    setUser(res.data.data);
+                    const userData = res.data.data;
+                    setUser(userData);
+                    localStorage.setItem('user', JSON.stringify(userData));
                     // Auto-redirect based on role
-                    const userRole = res.data.data.roles?.[0]?.name;
+                    const userRole = userData.roles?.[0]?.name;
                     if (userRole) {
                         switch (userRole) {
                             case 'super_admin':
@@ -48,6 +50,7 @@ export const AuthProvider = ({ children }) => {
                 })
                 .catch(() => {
                     localStorage.removeItem('token');
+                    localStorage.removeItem('user');
                     setToken(null);
                     setUser(null);
                 })
@@ -61,6 +64,7 @@ export const AuthProvider = ({ children }) => {
         const res = await api.post('/login', { email, password });
         if (res.data.success) {
             localStorage.setItem('token', res.data.data.token);
+            localStorage.setItem('user', JSON.stringify(res.data.data.user));
             setToken(res.data.data.token);
             setUser(res.data.data.user);
             
@@ -93,6 +97,7 @@ export const AuthProvider = ({ children }) => {
         const res = await api.post('/register', data);
         if (res.data.success) {
             localStorage.setItem('token', res.data.data.token);
+            localStorage.setItem('user', JSON.stringify(res.data.data.user));
             setToken(res.data.data.token);
             setUser(res.data.data.user);
             navigate('/dashboard');
@@ -107,6 +112,7 @@ export const AuthProvider = ({ children }) => {
             console.error(e);
         } finally {
             localStorage.removeItem('token');
+            localStorage.removeItem('user');
             setToken(null);
             setUser(null);
             navigate('/login');

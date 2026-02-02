@@ -8,8 +8,13 @@ const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   React.useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    setUser(userData);
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      setUser(userData);
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      setUser({});
+    }
   }, []);
 
   const handleLogout = () => {
@@ -107,9 +112,9 @@ const DashboardLayout = ({ children }) => {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
           <div className="flex items-center">
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.email}</p>
-              <p className="text-xs text-blue-600 capitalize">{user.roles?.[0]?.name}</p>
+              <p className="text-sm font-medium text-gray-900">{user.name || 'User'}</p>
+              <p className="text-xs text-gray-500">{user.email || 'No email'}</p>
+              <p className="text-xs text-blue-600 capitalize">{user.roles?.[0]?.name || 'user'}</p>
             </div>
           </div>
           <button
@@ -140,7 +145,7 @@ const DashboardLayout = ({ children }) => {
               <div className="relative">
                 <button className="flex items-center text-sm text-gray-700 hover:text-gray-900">
                   <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium">
-                    {user.name.charAt(0).toUpperCase()}
+                    {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                 </button>
               </div>

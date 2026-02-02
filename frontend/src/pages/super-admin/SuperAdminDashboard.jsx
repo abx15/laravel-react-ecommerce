@@ -395,11 +395,11 @@ const SuperAdminDashboard = () => {
                           <div className="flex items-center">
                             <div className="h-10 w-10 flex-shrink-0">
                               <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                                <span className="text-purple-600 font-medium">{admin.name?.charAt(0)}</span>
+                                <span className="text-purple-600 font-medium">{admin.name?.charAt(0) || admin.email?.charAt(0) || 'A'}</span>
                               </div>
                             </div>
                             <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{admin.name}</div>
+                              <div className="text-sm font-medium text-gray-900">{admin.name || 'Admin Name'}</div>
                             </div>
                           </div>
                         </td>
@@ -457,11 +457,11 @@ const SuperAdminDashboard = () => {
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0">
                             <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <span className="text-gray-600 font-medium">{user.name?.charAt(0)}</span>
+                              <span className="text-gray-600 font-medium">{user.name?.charAt(0) || user.email?.charAt(0) || 'U'}</span>
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{user.name || 'User Name'}</div>
                           </div>
                         </div>
                       </td>
@@ -500,12 +500,12 @@ const SuperAdminDashboard = () => {
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0">
                             <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <span className="text-gray-600 font-medium">{seller.name?.charAt(0)}</span>
+                              <span className="text-gray-600 font-medium">{seller.name?.charAt(0) || seller.email?.charAt(0) || 'S'}</span>
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{seller.name}</div>
-                            <div className="text-sm text-gray-500">{seller.email}</div>
+                            <div className="text-sm font-medium text-gray-900">{seller.name || 'Seller Name'}</div>
+                            <div className="text-sm text-gray-500">{seller.email || 'No email'}</div>
                           </div>
                         </div>
                       </td>

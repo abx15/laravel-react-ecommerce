@@ -10,6 +10,7 @@ const AdminDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [sellers, setSellers] = useState([]);
+  const [sellerRequests, setSellerRequests] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,18 +44,24 @@ const AdminDashboard = () => {
       const results = await Promise.allSettled([
         fetch('/api/admin/dashboard', { headers }),
         fetch('/api/admin/products-list', { headers }),
-        fetch('/api/admin/orders-list', { headers })
+        fetch('/api/admin/orders-list', { headers }),
+        fetch('/api/admin/sellers', { headers }),
+        fetch('/api/admin/seller-requests', { headers })
       ]);
 
       // Handle each result separately
       const dashboardResult = results[0];
       const productsResult = results[1];
       const ordersResult = results[2];
+      const sellersResult = results[3];
+      const sellerRequestsResult = results[4];
 
       // Set fallback data if API calls fail
       let dashboardData = { stats: { total_orders: 0, revenue: 0, total_products: 0, pending_sellers: 0 }, charts: [] };
       let productsData = { data: [] };
       let ordersData = { data: [] };
+      let sellersData = [];
+      let sellerRequestsData = [];
 
       if (dashboardResult.status === 'fulfilled') {
         dashboardData = await dashboardResult.value.json();
@@ -74,15 +81,31 @@ const AdminDashboard = () => {
         console.error('Orders API failed:', ordersResult.reason);
       }
 
+      if (sellersResult.status === 'fulfilled') {
+        sellersData = await sellersResult.value.json();
+      } else {
+        console.error('Sellers API failed:', sellersResult.reason);
+      }
+
+      if (sellerRequestsResult.status === 'fulfilled') {
+        sellerRequestsData = await sellerRequestsResult.value.json();
+      } else {
+        console.error('Seller requests API failed:', sellerRequestsResult.reason);
+      }
+
       setStats(dashboardData);
       setProducts(productsData.data || []);
       setOrders(ordersData.data || []);
       setUsers([]); // Will be populated when needed
-      setSellers([]); // Will be populated when needed
+      setSellers(sellersData.data || sellersData || []);
+      setSellerRequests(sellerRequestsData.data || sellerRequestsData || []);
       
       console.log('Admin Dashboard Data:', dashboardData);
       console.log('Products:', productsData);
       console.log('Orders:', ordersData);
+      console.log('Sellers:', sellersData);
+      console.log('Seller Requests:', sellerRequestsData);
+      console.log('First seller:', (sellersData.data || sellersData || [])[0]);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       // Set fallback data to prevent blank screen
@@ -94,6 +117,7 @@ const AdminDashboard = () => {
       setOrders([]);
       setUsers([]);
       setSellers([]);
+      setSellerRequests([]);
     } finally {
       setLoading(false);
     }
@@ -160,6 +184,74 @@ const AdminDashboard = () => {
       } catch (error) {
         console.error('Error deleting product:', error);
       }
+    }
+  };
+
+  const handleApproveSeller = async (sellerId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`/api/admin/sellers/${sellerId}/approve`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Error approving seller:', error);
+    }
+  };
+
+  const handleRejectSeller = async (sellerId) => {
+    const reason = prompt('Please enter rejection reason:');
+    if (reason) {
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`/api/admin/sellers/${sellerId}/reject`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ rejection_reason: reason })
+        });
+        fetchDashboardData();
+      } catch (error) {
+        console.error('Error rejecting seller:', error);
+      }
+    }
+  };
+
+  const handleBlockSeller = async (userId) => {
+    if (window.confirm('Are you sure you want to block this seller?')) {
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`/api/admin/sellers/${userId}/block`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        });
+        fetchDashboardData();
+      } catch (error) {
+        console.error('Error blocking seller:', error);
+      }
+    }
+  };
+
+  const handleUnblockSeller = async (userId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`/api/admin/sellers/${userId}/unblock`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Error unblocking seller:', error);
     }
   };
 
@@ -472,11 +564,11 @@ const AdminDashboard = () => {
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0">
                             <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <span className="text-gray-600 font-medium">{user.name?.charAt(0)}</span>
+                              <span className="text-gray-600 font-medium">{user.name?.charAt(0) || user.email?.charAt(0) || 'U'}</span>
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{user.name || 'User Name'}</div>
                           </div>
                         </div>
                       </td>
@@ -500,49 +592,158 @@ const AdminDashboard = () => {
 
         {/* Sellers Tab */}
         {activeTab === 'sellers' && (
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-2xl font-bold mb-6">Seller Management</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {sellers.map((seller) => (
-                    <tr key={seller.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <span className="text-gray-600 font-medium">{seller.name?.charAt(0)}</span>
-                            </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-2xl font-bold mb-6">Seller Management</h3>
+              
+              {/* Seller Requests */}
+              {sellerRequests.length > 0 ? (
+                <div className="mb-8">
+                  <h4 className="text-lg font-semibold mb-4 text-orange-600">Pending Seller Requests ({sellerRequests.length})</h4>
+                  <div className="space-y-4">
+                    {sellerRequests.map((seller) => (
+                      <div key={seller.id} className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h5 className="font-semibold text-gray-900">{seller.shop_name || 'Shop Name'}</h5>
+                            <p className="text-sm text-gray-600">{seller.user?.name || 'Name'} - {seller.user?.email || 'Email'}</p>
+                            <p className="text-sm text-gray-500 mt-1">{seller.shop_address || 'Address'}, {seller.city || 'City'}</p>
+                            <p className="text-sm text-gray-500">GST: {seller.gst_number || 'Not provided'}</p>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{seller.name}</div>
-                            <div className="text-sm text-gray-500">{seller.email}</div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleApproveSeller(seller.id)}
+                              className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                            >
+                              <FiCheckCircle className="inline mr-1" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectSeller(seller.id)}
+                              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                            >
+                              <FiXCircle className="inline mr-1" />
+                              Reject
+                            </button>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{seller.products_count || 0}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{seller.total_sales || 0}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${seller.total_revenue || 0}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          seller.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {seller.verified ? 'Verified' : 'Pending'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-8">
+                  <h4 className="text-lg font-semibold mb-4 text-green-600">No Pending Seller Requests</h4>
+                  <div className="text-center py-4">
+                    <p className="text-gray-500">All seller requests have been processed</p>
+                  </div>
+                </div>
+              )}
+
+              {/* All Sellers */}
+              <div>
+                <h4 className="text-lg font-semibold mb-4">All Sellers</h4>
+                {sellers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500 text-lg">No sellers found</div>
+                    <p className="text-gray-400 mt-2">Sellers will appear here once they register</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shop</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {sellers.map((seller) => (
+                          <tr key={seller.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="h-10 w-10 flex-shrink-0">
+                                  <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                    <span className="text-gray-600 font-medium">
+                                      {seller.user?.name?.charAt(0) || seller.user?.email?.charAt(0) || 'S'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{seller.user?.name || 'Unknown Seller'}</div>
+                                  <div className="text-sm text-gray-500">{seller.user?.email || 'No email'}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{seller.shop_name || 'No shop name'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{seller.products_count || 0}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{seller.total_sales || 0}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${seller.total_revenue || 0}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                seller.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                seller.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {seller.status === 'approved' ? 'Verified' : seller.status}
+                              </span>
+                              {seller.user?.is_blocked && (
+                                <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                  Blocked
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex space-x-2">
+                                {seller.status === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleApproveSeller(seller.id)}
+                                      className="text-green-600 hover:text-green-900"
+                                      title="Approve"
+                                    >
+                                      <FiCheckCircle />
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectSeller(seller.id)}
+                                      className="text-red-600 hover:text-red-900"
+                                      title="Reject"
+                                    >
+                                      <FiXCircle />
+                                    </button>
+                                  </>
+                                )}
+                                {!seller.user?.is_blocked ? (
+                                  <button
+                                    onClick={() => handleBlockSeller(seller.user.id)}
+                                    className="text-orange-600 hover:text-orange-900"
+                                    title="Block"
+                                  >
+                                    <FiAlertCircle />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleUnblockSeller(seller.user.id)}
+                                    className="text-blue-600 hover:text-blue-900"
+                                    title="Unblock"
+                                  >
+                                    <FiCheckCircle />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

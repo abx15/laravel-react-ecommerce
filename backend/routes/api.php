@@ -42,27 +42,59 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/payment/create-order', [PaymentController::class, 'createRazorpayOrder']);
     Route::post('/payment/verify', [PaymentController::class, 'verifyPayment']);
 
-    // Admin Routes
+    // Seller Registration (open to all authenticated users)
+    Route::post('/seller/register', [SellerController::class, 'store']);
+    Route::get('/seller/profile', [SellerController::class, 'myProfile']);
+
+    // Admin & Super Admin Routes (shared)
     Route::middleware(['role:admin|super_admin'])->group(function () {
         Route::apiResource('admin/products', ProductController::class)->except(['index', 'show']);
         Route::apiResource('admin/categories', CategoryController::class)->except(['index']);
         Route::get('admin/orders', [OrderController::class, 'adminIndex']);
         Route::patch('admin/orders/{order}/status', [OrderController::class, 'updateStatus']);
-        Route::get('admin/sellers', [AdminController::class, 'getSellers']);
-        Route::patch('admin/sellers/{id}/approve', [AdminController::class, 'approveSeller']);
-        Route::patch('admin/sellers/{id}/reject', [AdminController::class, 'rejectSeller']);
     });
 
-    // Seller Routes
-    Route::post('/seller/register', [SellerController::class, 'store']);
-    Route::middleware(['role:seller'])->group(function () {
+    // Admin Dashboard Routes
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/admin/dashboard', [AdminDashboardController::class, 'dashboard']);
+        Route::get('/admin/sellers', [AdminDashboardController::class, 'getSellers']);
+        Route::get('/admin/seller-requests', [AdminDashboardController::class, 'getSellerRequests']);
+        Route::get('/admin/orders-list', [AdminDashboardController::class, 'getOrders']);
+        Route::get('/admin/products-list', [AdminDashboardController::class, 'getProducts']);
+        Route::get('/admin/analytics', [AdminDashboardController::class, 'getAnalytics']);
+        
+        Route::patch('/admin/sellers/{seller}/approve', [AdminDashboardController::class, 'approveSeller']);
+        Route::patch('/admin/sellers/{seller}/reject', [AdminDashboardController::class, 'rejectSeller']);
+        Route::patch('/admin/sellers/{user}/block', [AdminDashboardController::class, 'blockSeller']);
+        Route::patch('/admin/sellers/{user}/unblock', [AdminDashboardController::class, 'unblockSeller']);
+    });
+
+    // Super Admin Dashboard Routes
+    Route::middleware(['role:super_admin'])->group(function () {
+        Route::get('/super-admin/dashboard', [SuperAdminController::class, 'dashboard']);
+        Route::get('/super-admin/users', [SuperAdminController::class, 'getUsers']);
+        Route::get('/super-admin/admins', [SuperAdminController::class, 'getAdmins']);
+        Route::get('/super-admin/sellers', [SuperAdminController::class, 'getSellers']);
+        Route::get('/super-admin/all-orders', [SuperAdminController::class, 'getAllOrders']);
+        Route::get('/super-admin/all-products', [SuperAdminController::class, 'getAllProducts']);
+        Route::get('/super-admin/system-analytics', [SuperAdminController::class, 'getSystemAnalytics']);
+        Route::get('/super-admin/system-settings', [SuperAdminController::class, 'getSystemSettings']);
+        
+        Route::post('/super-admin/admins', [SuperAdminController::class, 'createAdmin']);
+        Route::put('/super-admin/admins/{admin}', [SuperAdminController::class, 'updateAdmin']);
+        Route::delete('/super-admin/admins/{admin}', [SuperAdminController::class, 'deleteAdmin']);
+        Route::patch('/super-admin/users/{user}/block', [SuperAdminController::class, 'blockUser']);
+        Route::patch('/super-admin/users/{user}/unblock', [SuperAdminController::class, 'unblockUser']);
+        Route::put('/super-admin/system-settings', [SuperAdminController::class, 'updateSystemSettings']);
+    });
+
+    // Verified Seller Routes
+    Route::middleware(['role:seller', 'seller.verified'])->group(function () {
+        Route::get('/seller/dashboard', [SellerDashboardController::class, 'dashboard']);
         Route::get('/seller/products', [ProductController::class, 'sellerProducts']);
         Route::post('/seller/products', [ProductController::class, 'store']);
         Route::put('/seller/products/{product}', [ProductController::class, 'update']);
         Route::delete('/seller/products/{product}', [ProductController::class, 'destroy']);
-        
-        // Seller Dashboard Routes
-        Route::get('/seller/dashboard', [SellerDashboardController::class, 'dashboard']);
         Route::get('/seller/orders', [SellerDashboardController::class, 'getOrders']);
         Route::get('/seller/products-list', [SellerDashboardController::class, 'getProducts']);
         Route::patch('/seller/orders/{order}/status', [SellerDashboardController::class, 'updateOrderStatus']);
@@ -75,33 +107,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user/orders/{order}', [UserDashboardController::class, 'getOrder']);
         Route::get('/user/profile', [UserDashboardController::class, 'getProfile']);
         Route::put('/user/profile', [UserDashboardController::class, 'updateProfile']);
-    });
-
-    // Admin Dashboard Routes
-    Route::middleware(['role:admin'])->group(function () {
-        Route::get('/admin/dashboard', [AdminDashboardController::class, 'dashboard']);
-        Route::get('/admin/seller-requests', [AdminDashboardController::class, 'getSellerRequests']);
-        Route::get('/admin/orders-list', [AdminDashboardController::class, 'getOrders']);
-        Route::get('/admin/products-list', [AdminDashboardController::class, 'getProducts']);
-        Route::get('/admin/categories-list', [AdminDashboardController::class, 'getCategories']);
-        Route::patch('/admin/sellers/{id}/approve', [AdminDashboardController::class, 'approveSeller']);
-        Route::patch('/admin/sellers/{id}/reject', [AdminDashboardController::class, 'rejectSeller']);
-    });
-
-    // Super Admin Dashboard Routes
-    Route::middleware(['role:super_admin'])->group(function () {
-        Route::get('/super-admin/dashboard', [SuperAdminController::class, 'dashboard']);
-        Route::get('/super-admin/users', [SuperAdminController::class, 'getUsers']);
-        Route::get('/super-admin/admins', [SuperAdminController::class, 'getAdmins']);
-        Route::get('/super-admin/sellers', [SuperAdminController::class, 'getSellers']);
-        Route::get('/super-admin/all-orders', [SuperAdminController::class, 'getAllOrders']);
-        Route::get('/super-admin/system-settings', [SuperAdminController::class, 'getSystemSettings']);
-        
-        Route::post('/super-admin/admins', [SuperAdminController::class, 'createAdmin']);
-        Route::patch('/super-admin/sellers/{id}/approve', [SuperAdminController::class, 'approveSeller']);
-        Route::patch('/super-admin/sellers/{id}/reject', [SuperAdminController::class, 'rejectSeller']);
-        Route::patch('/super-admin/users/{id}/block', [SuperAdminController::class, 'blockUser']);
-        Route::patch('/super-admin/users/{id}/unblock', [SuperAdminController::class, 'unblockUser']);
-        Route::delete('/super-admin/admins/{id}', [SuperAdminController::class, 'deleteAdmin']);
     });
 });

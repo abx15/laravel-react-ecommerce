@@ -6,20 +6,30 @@ use App\Models\User;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Seller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Traits\ApiResponse;
 
 class AdminDashboardController extends Controller
 {
-    public function dashboard()
+    use AuthorizesRequests, ApiResponse;
+
+    public function dashboard(Request $request)
     {
+        $this->authorize('access-admin-dashboard', $request->user());
+
         try {
             $stats = [
+                'total_users' => User::where('user_type', 'user')->count(),
+                'total_sellers' => User::where('user_type', 'seller')->count(),
+                'verified_sellers' => User::where('user_type', 'seller')->where('is_seller_verified', true)->count(),
+                'pending_sellers' => Seller::where('status', 'pending')->count(),
+                'total_products' => Product::count(),
                 'total_orders' => Order::count(),
                 'revenue' => Order::where('status', 'completed')->sum('total') ?? 0,
-                'total_products' => Product::count(),
-                'pending_sellers' => User::where('email', 'like', '%seller%')->count(),
             ];
 
             // Daily/Weekly Orders
@@ -37,108 +47,168 @@ class AdminDashboardController extends Controller
                 ->orderBy('date')
                 ->get();
 
-            // Product Performance
-            $productPerformance = Product::with('category')
+            // Seller Activity
+            $sellerActivity = Seller::with('user')
                 ->orderBy('created_at', 'desc')
                 ->take(10)
                 ->get();
 
-            return response()->json([
+            return $this->success([
                 'stats' => $stats,
                 'charts' => [
                     'daily_orders' => $dailyOrders,
                     'revenue_trend' => $revenueTrend,
-                    'product_performance' => $productPerformance,
+                    'seller_activity' => $sellerActivity,
                 ]
             ]);
         } catch (\Exception $e) {
             // Return fallback data if there's an error
-            return response()->json([
+            return $this->success([
                 'stats' => [
+                    'total_users' => 0,
+                    'total_sellers' => 0,
+                    'verified_sellers' => 0,
+                    'pending_sellers' => 0,
+                    'total_products' => 0,
                     'total_orders' => 0,
                     'revenue' => 0,
-                    'total_products' => 0,
-                    'pending_sellers' => 0,
                 ],
                 'charts' => [
                     'daily_orders' => [],
                     'revenue_trend' => [],
-                    'product_performance' => [],
+                    'seller_activity' => [],
                 ]
             ]);
         }
     }
 
-    public function getSellerRequests()
+    public function getSellers(Request $request)
     {
-        $sellers = User::role('seller')
-            ->where('is_verified', false)
-            ->get(['id', 'name', 'email', 'created_at']);
+        $this->authorize('manage-sellers', $request->user());
 
-        return response()->json($sellers);
+        $sellers = Seller::with('user')->get();
+        return $this->success($sellers);
     }
 
-    public function approveSeller($id)
+    public function getSellerRequests(Request $request)
     {
-        $seller = User::findOrFail($id);
+        $this->authorize('manage-sellers', $request->user());
+
+        $sellers = Seller::with('user')
+            ->where('status', 'pending')
+            ->get();
+
+        return $this->success($sellers);
+    }
+
+    public function approveSeller(Request $request, Seller $seller)
+    {
+        $this->authorize('verify', $seller);
+
+        $seller->update(['status' => 'approved']);
+        $seller->user->update([
+            'is_seller_verified' => true,
+            'seller_verified_at' => now(),
+        ]);
+
+        return $this->success($seller->load('user'), 'Seller approved successfully');
+    }
+
+    public function rejectSeller(Request $request, Seller $seller)
+    {
+        $this->authorize('verify', $seller);
+
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string',
+        ]);
+
+        $seller->update([
+            'status' => 'rejected',
+        ]);
         
-        if (!$seller->hasRole('seller')) {
-            return response()->json(['message' => 'User is not a seller'], 400);
-        }
+        $seller->user->update([
+            'is_seller_verified' => false,
+            'seller_verified_at' => null,
+        ]);
 
-        $seller->update(['is_verified' => true]);
-
-        return response()->json(['message' => 'Seller approved successfully']);
+        return $this->success($seller->load('user'), 'Seller rejected');
     }
 
-    public function rejectSeller($id)
+    public function blockSeller(Request $request, User $user)
     {
-        $seller = User::findOrFail($id);
-        
-        if (!$seller->hasRole('seller')) {
-            return response()->json(['message' => 'User is not a seller'], 400);
+        $this->authorize('manage-sellers', $request->user());
+
+        if (!$user->isSeller()) {
+            return $this->error('User is not a seller', 400);
         }
 
-        $seller->update(['is_verified' => false]);
-
-        return response()->json(['message' => 'Seller rejected']);
+        $user->update(['is_blocked' => true]);
+        return $this->success([], 'Seller blocked successfully');
     }
 
-    public function getOrders()
+    public function unblockSeller(Request $request, User $user)
     {
-        try {
-            $orders = Order::with(['user'])
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
+        $this->authorize('manage-sellers', $request->user());
 
-            return response()->json($orders);
-        } catch (\Exception $e) {
-            return response()->json(['data' => []]);
+        if (!$user->isSeller()) {
+            return $this->error('User is not a seller', 400);
         }
+
+        $user->update(['is_blocked' => false]);
+        return $this->success([], 'Seller unblocked successfully');
     }
 
-    public function getProducts()
+    public function getProducts(Request $request)
     {
-        try {
-            $products = Product::with('category')
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
+        $this->authorize('access-admin-dashboard', $request->user());
 
-            return response()->json($products);
-        } catch (\Exception $e) {
-            return response()->json(['data' => []]);
-        }
+        $products = Product::with(['category', 'seller'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return $this->success($products);
     }
 
-    public function getCategories()
+    public function getOrders(Request $request)
     {
-        try {
-            $categories = Category::orderBy('name')
-                ->get();
+        $this->authorize('access-admin-dashboard', $request->user());
 
-            return response()->json($categories);
-        } catch (\Exception $e) {
-            return response()->json([]);
-        }
+        $orders = Order::with(['user', 'items.product'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return $this->success($orders);
+    }
+
+    public function getAnalytics(Request $request)
+    {
+        $this->authorize('access-admin-dashboard', $request->user());
+
+        // Top selling products
+        $topProducts = DB::table('order_items')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->select('products.name', DB::raw('SUM(order_items.quantity) as total_sold'))
+            ->groupBy('products.id', 'products.name')
+            ->orderBy('total_sold', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Seller performance
+        $sellerPerformance = User::where('user_type', 'seller')
+            ->where('is_seller_verified', true)
+            ->withCount(['products', 'orders' => function($query) {
+                $query->where('status', 'completed');
+            }])
+            ->withSum(['orders' => function($query) {
+                $query->where('status', 'completed');
+            }], 'total')
+            ->orderBy('orders_sum_total', 'desc')
+            ->limit(10)
+            ->get();
+
+        return $this->success([
+            'top_products' => $topProducts,
+            'seller_performance' => $sellerPerformance,
+        ]);
     }
 }
