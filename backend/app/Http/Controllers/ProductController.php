@@ -43,7 +43,9 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'original_price' => 'nullable|numeric|min:0',
+            'discount_percentage' => 'nullable|integer|min:0|max:100'
         ]);
 
         $product = Product::create([
@@ -51,6 +53,8 @@ class ProductController extends Controller
             'slug' => Str::slug($validated['name']) . '-' . uniqid(),
             'description' => $validated['description'],
             'price' => $validated['price'],
+            'original_price' => $validated['original_price'] ?? null,
+            'discount_percentage' => $validated['discount_percentage'] ?? 0,
             'stock' => $validated['stock'],
             'category_id' => $validated['category_id'],
             'is_active' => true,
@@ -88,6 +92,8 @@ class ProductController extends Controller
             'name' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
             'price' => 'sometimes|numeric|min:0',
+            'original_price' => 'nullable|numeric|min:0',
+            'discount_percentage' => 'nullable|integer|min:0|max:100',
             'stock' => 'sometimes|integer|min:0',
             'category_id' => 'sometimes|exists:categories,id',
             'is_active' => 'boolean'
@@ -99,7 +105,38 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        return $this->success($product, 'Product updated successfully');
+        // Handle Image Uploads (Append to existing)
+        if ($request->hasFile('images')) {
+            $product->load('category'); // Ensure category is loaded
+            $category = $product->category;
+            $categoryName = $category ? Str::slug($category->name) : 'uncategorized';
+
+            foreach ($request->file('images') as $image) {
+                $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $destinationPath = public_path('assets/products/' . $categoryName);
+                $image->move($destinationPath, $filename);
+
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => '/assets/products/' . $categoryName . '/' . $filename,
+                    'is_primary' => false // Appended images are not primary by default
+                ]);
+            }
+        }
+
+        return $this->success($product->load('images'), 'Product updated successfully');
+    }
+
+    public function deleteImage($imageId)
+    {
+        $image = ProductImage::find($imageId);
+        if (!$image) return $this->error('Image not found', 404);
+
+        // Optional: Delete from storage
+        // if(file_exists(public_path($image->image_path))) { unlink(public_path($image->image_path)); }
+
+        $image->delete();
+        return $this->success([], 'Image deleted successfully');
     }
 
     public function destroy(Product $product)

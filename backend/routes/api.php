@@ -27,7 +27,9 @@ Route::get('/categories', [CategoryController::class, 'index']);
 // Protected Routes (require authentication)
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::delete('/product-images/{id}', [ProductController::class, 'deleteImage']);
 
     // Cart Routes (require authentication)
     Route::get('/cart', [CartController::class, 'index']);

@@ -17,7 +17,11 @@ class Product extends Model
         'stock',
         'category_id',
         'seller_id',
-        'is_active'
+        'is_active',
+        'original_price',
+        'discount_percentage',
+        'rating',
+        'reviews_count'
     ];
 
     public function category()
