@@ -4,301 +4,273 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Order;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\Seller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use App\Traits\ApiResponse;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class SuperAdminController extends Controller
 {
-    use AuthorizesRequests, ApiResponse;
-
-    public function dashboard(Request $request)
+    /**
+     * Get Dashboard Statistics
+     */
+    public function getDashboardStats()
     {
-        $this->authorize('manage-admins', $request->user());
-
         try {
+            // Count users by user_type
+            $totalUsers = User::where('user_type', 'user')->count();
+            $totalAdmins = User::where('user_type', 'admin')->count();
+            $totalSellers = User::where('user_type', 'seller')->count();
+
+            // Calculate total revenue (if Order model exists)
+            $totalRevenue = 0;
+            if (class_exists(Order::class)) {
+                $totalRevenue = Order::where('status', 'delivered')
+                    ->sum('total_amount');
+            }
+
+            // Mock growth percentages (you can calculate real growth later)
             $stats = [
-                'total_users' => User::where('user_type', 'user')->count(),
-                'total_admins' => User::where('user_type', 'admin')->count(),
-                'total_sellers' => User::where('user_type', 'seller')->count(),
-                'verified_sellers' => User::where('user_type', 'seller')->where('is_seller_verified', true)->count(),
-                'total_products' => Product::count(),
-                'total_orders' => Order::count(),
-                'total_revenue' => Order::where('status', 'completed')->sum('total') ?? 0,
-                'pending_sellers' => Seller::where('status', 'pending')->count(),
+                'totalUsers' => $totalUsers,
+                'totalAdmins' => $totalAdmins,
+                'totalSellers' => $totalSellers,
+                'totalRevenue' => $totalRevenue,
+                'userGrowth' => 18.2,
+                'adminGrowth' => 5.4,
+                'sellerGrowth' => 12.3,
+                'revenueGrowth' => -22.1
             ];
 
-            // Monthly Revenue (Last 12 months)
-            $monthlyRevenue = Order::where('status', 'completed')
-                ->where('created_at', '>=', Carbon::now()->subMonths(12))
-                ->selectRaw('MONTH(created_at) as month, YEAR(created_at) as year, SUM(total) as revenue')
-                ->groupBy('month', 'year')
-                ->orderBy('year', 'asc')
-                ->orderBy('month', 'asc')
-                ->get();
-
-            // Orders vs Revenue (Last 30 days)
-            $ordersRevenue = Order::where('created_at', '>=', Carbon::now()->subDays(30))
-                ->selectRaw('DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue')
-                ->groupBy('date')
-                ->orderBy('date')
-                ->get();
-
-            // User Growth (Last 6 months)
-            $userGrowth = User::where('created_at', '>=', Carbon::now()->subMonths(6))
-                ->selectRaw('MONTH(created_at) as month, YEAR(created_at) as year, COUNT(*) as users')
-                ->groupBy('month', 'year')
-                ->orderBy('year', 'asc')
-                ->orderBy('month', 'asc')
-                ->get();
-
-            // Admin Activity
-            $adminActivity = User::where('user_type', 'admin')
-                ->withCount(['orders' => function($query) {
-                    $query->where('status', 'completed');
-                }])
-                ->orderBy('created_at', 'desc')
-                ->take(10)
-                ->get();
-
-            return $this->success([
-                'stats' => $stats,
-                'charts' => [
-                    'monthly_revenue' => $monthlyRevenue,
-                    'orders_revenue' => $ordersRevenue,
-                    'user_growth' => $userGrowth,
-                    'admin_activity' => $adminActivity,
+            return response()->json([
+                'success' => true,
+                'message' => 'Dashboard stats fetched successfully',
+                'data' => [
+                    'stats' => $stats,
+                    'charts' => []
                 ]
-            ]);
+            ], 200);
         } catch (\Exception $e) {
-            // Return fallback data if there's an error
-            return $this->success([
-                'stats' => [
-                    'total_users' => 0,
-                    'total_admins' => 0,
-                    'total_sellers' => 0,
-                    'verified_sellers' => 0,
-                    'total_products' => 0,
-                    'total_orders' => 0,
-                    'total_revenue' => 0,
-                    'pending_sellers' => 0,
-                ],
-                'charts' => [
-                    'monthly_revenue' => [],
-                    'orders_revenue' => [],
-                    'user_growth' => [],
-                    'admin_activity' => [],
-                ]
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching dashboard statistics',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
-    public function getUsers(Request $request)
+    /**
+     * Get All Admins
+     */
+    public function getAllAdmins()
     {
-        $this->authorize('manage-admins', $request->user());
+        try {
+            $admins = User::where('user_type', 'admin')
+                ->select('id', 'name', 'email', 'user_type', 'status', 'created_at', 'updated_at')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($user) {
+                    $user->role = $user->user_type; // Map user_type to role for frontend compatibility
+                    return $user;
+                });
 
-        $users = User::orderBy('created_at', 'desc')->get();
-        return $this->success($users);
+            return response()->json([
+                'success' => true,
+                'message' => 'Admins fetched successfully',
+                'count' => $admins->count(),
+                'data' => $admins
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching admins',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    public function getAdmins(Request $request)
+    /**
+     * Get All Users
+     */
+    public function getAllUsers()
     {
-        $this->authorize('manage-admins', $request->user());
+        try {
+            $users = User::where('user_type', 'user')
+                ->select('id', 'name', 'email', 'user_type', 'status', 'created_at', 'updated_at')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($user) {
+                    $user->role = $user->user_type;
+                    return $user;
+                });
 
-        $admins = User::where('user_type', 'admin')->get();
-        return $this->success($admins);
+            return response()->json([
+                'success' => true,
+                'message' => 'Users fetched successfully',
+                'count' => $users->count(),
+                'data' => $users
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching users',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    public function getSellers(Request $request)
+    /**
+     * Get All Sellers
+     */
+    public function getAllSellers()
     {
-        $this->authorize('manage-admins', $request->user());
+        try {
+            $sellers = User::where('user_type', 'seller')
+                ->select('id', 'name', 'email', 'user_type', 'status', 'created_at', 'updated_at')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($user) {
+                    $user->role = $user->user_type;
+                    return $user;
+                });
 
-        $sellers = User::where('user_type', 'seller')->get();
-        return $this->success($sellers);
+            return response()->json([
+                'success' => true,
+                'message' => 'Sellers fetched successfully',
+                'count' => $sellers->count(),
+                'data' => $sellers
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching sellers',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
+    /**
+     * Create New Admin
+     */
     public function createAdmin(Request $request)
     {
-        $this->authorize('manage-admins', $request->user());
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:8'
+            ]);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
 
-        $admin = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => bcrypt($validated['password']),
-            'user_type' => 'admin',
-        ]);
+            $admin = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'user_type' => 'admin', // Using user_type
+                'status' => 'active'
+            ]);
 
-        $admin->assignRole('admin');
+            // Assign Spatie role if available
+            if (method_exists($admin, 'assignRole')) {
+                try {
+                    $admin->assignRole('admin');
+                } catch (\Exception $e) {
+                    // Ignore if role doesn't exist
+                }
+            }
 
-        return $this->success($admin->load('roles'), 'Admin created successfully', 201);
-    }
-
-    public function updateAdmin(Request $request, User $admin)
-    {
-        $this->authorize('manage-admins', $request->user());
-
-        if (!$admin->isAdmin()) {
-            return $this->error('User is not an admin', 400);
+            return response()->json([
+                'success' => true,
+                'message' => 'Admin created successfully',
+                'data' => $admin
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating admin',
+                'error' => $e->getMessage()
+            ], 500);
         }
+    }
 
-        if ($admin->isSuperAdmin()) {
-            return $this->error('Cannot modify super admin', 403);
+    /**
+     * Update User Role
+     */
+    public function updateUserRole(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'role' => 'required|string|in:user,admin,seller,super_admin'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $user = User::findOrFail($id);
+            $user->user_type = $request->role; // Update user_type
+            $user->save();
+
+            // Sync Spatie roles if available
+            if (method_exists($user, 'syncRoles')) {
+                try {
+                    $user->syncRoles([$request->role]);
+                } catch (\Exception $e) {
+                    // Ignore
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User role updated successfully',
+                'data' => $user
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating user role',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $admin->id,
-            'password' => 'sometimes|string|min:8|confirmed',
-        ]);
-
-        $admin->update($validated);
-
-        return $this->success($admin->load('roles'), 'Admin updated successfully');
     }
 
-    public function deleteAdmin(Request $request, User $admin)
+    /**
+     * Delete User
+     */
+    public function deleteUser($id)
     {
-        $this->authorize('manage-admins', $request->user());
+        try {
+            $user = User::findOrFail($id);
 
-        if (!$admin->isAdmin()) {
-            return $this->error('User is not an admin', 400);
+            // Prevent deleting super admin
+            if ($user->user_type === 'super_admin' || $user->user_type === 'superadmin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete Super Admin account'
+                ], 403);
+            }
+
+            $user->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting user',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        if ($admin->isSuperAdmin()) {
-            return $this->error('Cannot delete super admin', 403);
-        }
-
-        $admin->delete();
-
-        return $this->success([], 'Admin deleted successfully');
-    }
-
-    public function blockUser(Request $request, User $user)
-    {
-        $this->authorize('manage-admins', $request->user());
-
-        if ($user->isSuperAdmin()) {
-            return $this->error('Cannot block super admin', 403);
-        }
-
-        $user->update(['is_blocked' => true]);
-        return $this->success([], 'User blocked successfully');
-    }
-
-    public function unblockUser(Request $request, User $user)
-    {
-        $this->authorize('manage-admins', $request->user());
-
-        $user->update(['is_blocked' => false]);
-        return $this->success([], 'User unblocked successfully');
-    }
-
-    public function getAllOrders(Request $request)
-    {
-        $this->authorize('manage-admins', $request->user());
-
-        $orders = Order::with(['user', 'items.product'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
-
-        return $this->success($orders);
-    }
-
-    public function getAllProducts(Request $request)
-    {
-        $this->authorize('manage-admins', $request->user());
-
-        $products = Product::with(['category', 'seller'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
-
-        return $this->success($products);
-    }
-
-    public function getSystemAnalytics(Request $request)
-    {
-        $this->authorize('manage-admins', $request->user());
-
-        // Platform analytics
-        $platformStats = [
-            'total_revenue' => Order::where('status', 'completed')->sum('total'),
-            'avg_order_value' => Order::where('status', 'completed')->avg('total'),
-            'conversion_rate' => 0, // Would need tracking data
-            'active_users' => User::where('created_at', '>=', now()->subDays(30))->count(),
-        ];
-
-        // Top performing sellers
-        $topSellers = User::where('user_type', 'seller')
-            ->where('is_seller_verified', true)
-            ->withCount(['products', 'orders' => function($query) {
-                $query->where('status', 'completed');
-            }])
-            ->withSum(['orders' => function($query) {
-                $query->where('status', 'completed');
-            }], 'total')
-            ->orderBy('orders_sum_total', 'desc')
-            ->limit(10)
-            ->get();
-
-        // Product categories performance
-        $categoryStats = Category::withCount(['products'])
-            ->withSum(['products.orderItems' => function($query) {
-                $query->whereHas('order', function($q) {
-                    $q->where('status', 'completed');
-                });
-            }], 'quantity')
-            ->orderBy('products_order_items_sum_quantity', 'desc')
-            ->get();
-
-        return $this->success([
-            'platform_stats' => $platformStats,
-            'top_sellers' => $topSellers,
-            'category_stats' => $categoryStats,
-        ]);
-    }
-
-    public function getSystemSettings(Request $request)
-    {
-        $this->authorize('manage-admins', $request->user());
-
-        // This would typically come from a settings table
-        return $this->success([
-            'settings' => [
-                'site_name' => 'E-Commerce Platform',
-                'maintenance_mode' => false,
-                'registration_enabled' => true,
-                'seller_verification_required' => true,
-                'commission_rate' => 5, // percentage
-                'min_payout_amount' => 1000,
-            ]
-        ]);
-    }
-
-    public function updateSystemSettings(Request $request)
-    {
-        $this->authorize('manage-admins', $request->user());
-
-        $validated = $request->validate([
-            'site_name' => 'sometimes|string|max:255',
-            'maintenance_mode' => 'sometimes|boolean',
-            'registration_enabled' => 'sometimes|boolean',
-            'seller_verification_required' => 'sometimes|boolean',
-            'commission_rate' => 'sometimes|numeric|min:0|max:100',
-            'min_payout_amount' => 'sometimes|numeric|min:0',
-        ]);
-
-        // Update settings in database (would need settings table)
-        return $this->success($validated, 'Settings updated successfully');
     }
 }
