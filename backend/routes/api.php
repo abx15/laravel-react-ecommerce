@@ -88,6 +88,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/admin/products-list', [AdminDashboardController::class, 'getProducts']);
         Route::get('/admin/orders-list', [AdminDashboardController::class, 'getOrders']);
         Route::get('/admin/sellers', [AdminDashboardController::class, 'getSellers']);
+        Route::get('/admin/users', [AdminDashboardController::class, 'getUsers']);
         Route::get('/admin/seller-requests', [AdminDashboardController::class, 'getSellerRequests']);
         Route::get('/admin/analytics', [AdminDashboardController::class, 'getAnalytics']);
 

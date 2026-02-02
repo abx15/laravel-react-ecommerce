@@ -16,10 +16,10 @@ class SuperAdminController extends Controller
     public function getDashboardStats()
     {
         try {
-            // Count users by user_type
-            $totalUsers = User::where('user_type', 'user')->count();
-            $totalAdmins = User::where('user_type', 'admin')->count();
-            $totalSellers = User::where('user_type', 'seller')->count();
+            // Count users by user_type (robust check)
+            $totalUsers = User::whereIn('user_type', ['user', 'User'])->count();
+            $totalAdmins = User::whereIn('user_type', ['admin', 'Admin'])->count();
+            $totalSellers = User::whereIn('user_type', ['seller', 'Seller'])->count();
 
             // Calculate total revenue (if Order model exists)
             $totalRevenue = 0;
@@ -30,14 +30,14 @@ class SuperAdminController extends Controller
 
             // Mock growth percentages (you can calculate real growth later)
             $stats = [
-                'totalUsers' => $totalUsers,
-                'totalAdmins' => $totalAdmins,
-                'totalSellers' => $totalSellers,
-                'totalRevenue' => $totalRevenue,
-                'userGrowth' => 18.2,
-                'adminGrowth' => 5.4,
-                'sellerGrowth' => 12.3,
-                'revenueGrowth' => -22.1
+                'total_users' => $totalUsers, // Changed key to match frontend expectation snake_case
+                'total_admins' => $totalAdmins,
+                'total_sellers' => $totalSellers,
+                'total_revenue' => $totalRevenue,
+                'user_growth' => 18.2,
+                'admin_growth' => 5.4,
+                'seller_growth' => 12.3,
+                'revenue_growth' => -22.1
             ];
 
             return response()->json([
@@ -63,7 +63,7 @@ class SuperAdminController extends Controller
     public function getAllAdmins()
     {
         try {
-            $admins = User::where('user_type', 'admin')
+            $admins = User::whereIn('user_type', ['admin', 'Admin'])
                 ->select('id', 'name', 'email', 'user_type', 'status', 'created_at', 'updated_at')
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -93,7 +93,7 @@ class SuperAdminController extends Controller
     public function getAllUsers()
     {
         try {
-            $users = User::where('user_type', 'user')
+            $users = User::whereIn('user_type', ['user', 'User'])
                 ->select('id', 'name', 'email', 'user_type', 'status', 'created_at', 'updated_at')
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -123,7 +123,7 @@ class SuperAdminController extends Controller
     public function getAllSellers()
     {
         try {
-            $sellers = User::where('user_type', 'seller')
+            $sellers = User::whereIn('user_type', ['seller', 'Seller'])
                 ->select('id', 'name', 'email', 'user_type', 'status', 'created_at', 'updated_at')
                 ->orderBy('created_at', 'desc')
                 ->get()

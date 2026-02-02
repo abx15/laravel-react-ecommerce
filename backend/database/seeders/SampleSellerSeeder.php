@@ -11,68 +11,76 @@ class SampleSellerSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create a sample seller user
-        $sellerUser = User::firstOrCreate(
-            ['email' => 'seller@example.com'],
+        // Define 5 distinct sellers
+        $sellers = [
             [
-                'name' => 'John Seller',
-                'password' => Hash::make('password'),
-                'user_type' => 'seller',
-                'is_seller_verified' => false,
-            ]
-        );
-        $sellerUser->assignRole('seller');
-
-        // Create seller profile
-        Seller::firstOrCreate(
-            ['user_id' => $sellerUser->id],
-            [
+                'name' => 'John Tech',
+                'email' => 'seller1@example.com',
                 'shop_name' => 'John Electronics',
-                'shop_address' => '123 Main Street',
-                'city' => 'New York',
-                'pincode' => '10001',
-                'gst_number' => 'GST123456789',
-                'id_proof_path' => 'seller_proofs/sample.jpg',
-                'bank_details' => [
-                    'account_holder_name' => 'John Seller',
-                    'account_number' => '1234567890',
-                    'ifsc_code' => 'SBIN0001234',
-                    'bank_name' => 'State Bank of India'
-                ],
-                'status' => 'pending',
-            ]
-        );
-
-        // Create another verified seller
-        $verifiedSellerUser = User::firstOrCreate(
-            ['email' => 'verifiedseller@example.com'],
-            [
-                'name' => 'Jane Verified',
-                'password' => Hash::make('password'),
-                'user_type' => 'seller',
-                'is_seller_verified' => true,
-                'seller_verified_at' => now(),
-            ]
-        );
-        $verifiedSellerUser->assignRole('seller');
-
-        Seller::firstOrCreate(
-            ['user_id' => $verifiedSellerUser->id],
-            [
-                'shop_name' => 'Jane Fashion',
-                'shop_address' => '456 Fashion Avenue',
-                'city' => 'Los Angeles',
-                'pincode' => '90001',
-                'gst_number' => 'GST987654321',
-                'id_proof_path' => 'seller_proofs/verified.jpg',
-                'bank_details' => [
-                    'account_holder_name' => 'Jane Verified',
-                    'account_number' => '0987654321',
-                    'ifsc_code' => 'HDFC0005678',
-                    'bank_name' => 'HDFC Bank'
-                ],
                 'status' => 'approved',
-            ]
-        );
+                'is_verified' => true,
+            ],
+            [
+                'name' => 'Sarah Fashion',
+                'email' => 'seller2@example.com',
+                'shop_name' => 'Sarah Styles',
+                'status' => 'approved',
+                'is_verified' => true,
+            ],
+            [
+                'name' => 'Mike Sports',
+                'email' => 'seller3@example.com',
+                'shop_name' => 'Mike Activewear',
+                'status' => 'pending',
+                'is_verified' => false,
+            ],
+            [
+                'name' => 'Emily Decor',
+                'email' => 'seller4@example.com',
+                'shop_name' => 'Emily Home',
+                'status' => 'approved',
+                'is_verified' => true,
+            ],
+            [
+                'name' => 'David Books',
+                'email' => 'seller5@example.com',
+                'shop_name' => 'Davids Reader Haven',
+                'status' => 'pending',
+                'is_verified' => false,
+            ],
+        ];
+
+        foreach ($sellers as $data) {
+            $user = User::firstOrCreate(
+                ['email' => $data['email']],
+                [
+                    'name' => $data['name'],
+                    'password' => Hash::make('password'),
+                    'user_type' => 'seller',
+                    'is_seller_verified' => $data['is_verified'],
+                    'seller_verified_at' => $data['is_verified'] ? now() : null,
+                ]
+            );
+            $user->assignRole('seller');
+
+            Seller::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'shop_name' => $data['shop_name'],
+                    'shop_address' => '123 Market St',
+                    'city' => 'Cityville',
+                    'pincode' => '123456',
+                    'gst_number' => 'GST' . rand(1000, 9999),
+                    'id_proof_path' => 'seller_proofs/default.jpg',
+                    'bank_details' => [
+                        'account_holder_name' => $data['name'],
+                        'account_number' => '123456789' . rand(0, 9),
+                        'ifsc_code' => 'BANK0001234',
+                        'bank_name' => 'Test Bank'
+                    ],
+                    'status' => $data['status'],
+                ]
+            );
+        }
     }
 }

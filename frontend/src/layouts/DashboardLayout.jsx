@@ -60,16 +60,14 @@ const DashboardLayout = ({ children }) => {
       ],
       admin: [
         { name: 'Dashboard', href: '/admin', icon: <FiGrid /> },
-        { name: 'Seller Requests', href: '/admin/seller-requests', icon: <FiUserCheck /> },
+        { name: 'Sellers', href: '/admin/sellers', icon: <FiUserCheck /> },
         { name: 'Orders', href: '/admin/orders', icon: <FiShoppingBag /> },
         { name: 'Products', href: '/admin/products', icon: <FiBox /> },
-        { name: 'Categories', href: '/admin/categories', icon: <FiBarChart2 /> },
       ],
       seller: [
         { name: 'Dashboard', href: '/seller/dashboard', icon: <FiGrid /> },
         { name: 'Products', href: '/seller/products', icon: <FiBox /> },
         { name: 'Orders', href: '/seller/orders', icon: <FiShoppingBag /> },
-        { name: 'Analytics', href: '/seller/analytics', icon: <FiBarChart2 /> },
       ],
       user: [
         { name: 'Dashboard', href: '/dashboard', icon: <FiGrid /> },

@@ -9,8 +9,8 @@ import BecomeSeller from './pages/auth/BecomeSeller';
 import Home from './pages/Home';
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
-import Dashboard from './pages/Dashboard';
-import AdminDashboard from './pages/AdminDashboard';
+import Dashboard from './pages/Dashboard'; // Legacy user dashboard?
+import AdminDashboard from './pages/AdminDashboard'; // Legacy?
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
@@ -65,6 +65,20 @@ function App() {
                 </DashboardLayout>
               </ProtectedRoute>
             } />
+            <Route path="/user/orders" element={
+              <ProtectedRoute roles={['user']}>
+                <DashboardLayout>
+                  <UserDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/user/addresses" element={
+              <ProtectedRoute roles={['user']}>
+                <DashboardLayout>
+                  <UserDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Layout>
@@ -102,9 +116,44 @@ function App() {
                 </DashboardLayout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/products" element={
+              <ProtectedRoute roles={['admin']}>
+                <DashboardLayout>
+                  <AdminDashboardNew />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/orders" element={
+              <ProtectedRoute roles={['admin']}>
+                <DashboardLayout>
+                  <AdminDashboardNew />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/seller-requests" element={
+              <ProtectedRoute roles={['admin']}>
+                <DashboardLayout>
+                  <AdminDashboardNew />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/sellers" element={
+              <ProtectedRoute roles={['admin']}>
+                <DashboardLayout>
+                  <AdminDashboardNew />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/categories" element={
+              <ProtectedRoute roles={['admin']}>
+                <DashboardLayout>
+                  <AdminDashboardNew />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
 
             {/* Super Admin Dashboard Routes */}
-            <Route path="/super-admin" element={
+            <Route path="/super-admin/*" element={
               <ProtectedRoute roles={['super_admin']}>
                 <DashboardLayout>
                   <SuperAdminDashboard />
@@ -114,6 +163,27 @@ function App() {
 
             {/* Seller Dashboard Routes */}
             <Route path="/seller/dashboard" element={
+              <ProtectedRoute roles={['seller']}>
+                <DashboardLayout>
+                  <SellerDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/seller/products" element={
+              <ProtectedRoute roles={['seller']}>
+                <DashboardLayout>
+                  <SellerDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/seller/orders" element={
+              <ProtectedRoute roles={['seller']}>
+                <DashboardLayout>
+                  <SellerDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/seller/analytics" element={
               <ProtectedRoute roles={['seller']}>
                 <DashboardLayout>
                   <SellerDashboard />

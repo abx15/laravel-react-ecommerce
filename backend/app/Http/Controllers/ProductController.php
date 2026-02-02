@@ -54,6 +54,7 @@ class ProductController extends Controller
             'stock' => $validated['stock'],
             'category_id' => $validated['category_id'],
             'is_active' => true,
+            'seller_id' => $request->user()->id,
         ]);
 
         if ($request->hasFile('images')) {
@@ -94,5 +95,15 @@ class ProductController extends Controller
     {
         $product->delete();
         return $this->success([], 'Product deleted successfully');
+    }
+
+    public function sellerProducts(Request $request)
+    {
+        $products = Product::where('seller_id', $request->user()->id)
+            ->with(['category', 'images'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return $this->success($products);
     }
 }

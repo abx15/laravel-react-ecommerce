@@ -176,12 +176,22 @@ class ProductSeeder extends Seeder
             ],
         ];
 
+        // Get available seller User IDs
+        $sellerIds = \App\Models\User::role('seller')->pluck('id')->toArray();
+        if (empty($sellerIds)) {
+            // Fallback if no sellers exist (though SampleSellerSeeder should run first)
+            $sellerIds = [\App\Models\User::first()->id ?? null];
+        }
+
         foreach ($products as $productData) {
             $images = $productData['images'];
             unset($productData['images']);
-            
+
+            // Assign a random seller to the product
+            $productData['seller_id'] = $sellerIds[array_rand($sellerIds)];
+
             $product = Product::create($productData);
-            
+
             foreach ($images as $imageData) {
                 $product->images()->create($imageData);
             }

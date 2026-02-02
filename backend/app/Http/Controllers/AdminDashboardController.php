@@ -7,11 +7,13 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Seller;
+use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Traits\ApiResponse;
+use Illuminate\Support\Str;
 
 class AdminDashboardController extends Controller
 {
@@ -29,7 +31,7 @@ class AdminDashboardController extends Controller
                 'pending_sellers' => Seller::where('status', 'pending')->count(),
                 'total_products' => Product::count(),
                 'total_orders' => Order::count(),
-                'revenue' => Order::where('status', 'completed')->sum('total') ?? 0,
+                'revenue' => Order::where('status', 'completed')->sum('total_amount') ?? 0,
             ];
 
             // Daily/Weekly Orders
@@ -42,7 +44,7 @@ class AdminDashboardController extends Controller
             // Revenue Trend (Last 30 days)
             $revenueTrend = Order::where('status', 'completed')
                 ->where('created_at', '>=', Carbon::now()->subDays(30))
-                ->selectRaw('DATE(created_at) as date, SUM(total) as revenue')
+                ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue')
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
@@ -86,7 +88,10 @@ class AdminDashboardController extends Controller
     {
         $this->authorize('manage-sellers', $request->user());
 
-        $sellers = Seller::with('user')->get();
+        $sellers = Seller::with('user')
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
         return $this->success($sellers);
     }
 
@@ -99,6 +104,14 @@ class AdminDashboardController extends Controller
             ->get();
 
         return $this->success($sellers);
+    }
+
+    public function getUsers(Request $request)
+    {
+        $this->authorize('access-admin-dashboard', $request->user());
+
+        $users = User::where('user_type', 'user')->orderBy('created_at', 'desc')->paginate(20);
+        return $this->success($users);
     }
 
     public function approveSeller(Request $request, Seller $seller)
@@ -125,7 +138,7 @@ class AdminDashboardController extends Controller
         $seller->update([
             'status' => 'rejected',
         ]);
-        
+
         $seller->user->update([
             'is_seller_verified' => false,
             'seller_verified_at' => null,
@@ -169,6 +182,75 @@ class AdminDashboardController extends Controller
         return $this->success($products);
     }
 
+    // --- Added CRUD Operations ---
+
+    public function storeProduct(Request $request)
+    {
+        $this->authorize('access-admin-dashboard', $request->user());
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'category_id' => 'required|exists:categories,id',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+        ]);
+
+        $product = Product::create([
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']) . '-' . uniqid(),
+            'description' => $validated['description'],
+            'price' => $validated['price'],
+            'stock' => $validated['stock'],
+            'category_id' => $validated['category_id'],
+            'is_active' => true,
+            'seller_id' => $request->user()->id, // Admin is the seller
+        ]);
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                $path = $image->store('products', 'public');
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => '/storage/' . $path,
+                    'is_primary' => $index === 0
+                ]);
+            }
+        }
+
+        return $this->success($product, 'Product created successfully', 201);
+    }
+
+    public function updateProduct(Request $request, Product $product)
+    {
+        $this->authorize('access-admin-dashboard', $request->user());
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'price' => 'sometimes|numeric|min:0',
+            'stock' => 'sometimes|integer|min:0',
+            'category_id' => 'sometimes|exists:categories,id',
+            'is_active' => 'boolean'
+        ]);
+
+        if (isset($validated['name'])) {
+            $validated['slug'] = Str::slug($validated['name']) . '-' . uniqid();
+        }
+
+        $product->update($validated);
+
+        return $this->success($product, 'Product updated successfully');
+    }
+
+    public function deleteProduct(Request $request, Product $product)
+    {
+        $this->authorize('access-admin-dashboard', $request->user());
+        $product->delete();
+        return $this->success([], 'Product deleted successfully');
+    }
+
     public function getOrders(Request $request)
     {
         $this->authorize('access-admin-dashboard', $request->user());
@@ -196,13 +278,13 @@ class AdminDashboardController extends Controller
         // Seller performance
         $sellerPerformance = User::where('user_type', 'seller')
             ->where('is_seller_verified', true)
-            ->withCount(['products', 'orders' => function($query) {
+            ->withCount(['products', 'orders' => function ($query) {
                 $query->where('status', 'completed');
             }])
-            ->withSum(['orders' => function($query) {
+            ->withSum(['orders' => function ($query) {
                 $query->where('status', 'completed');
-            }], 'total')
-            ->orderBy('orders_sum_total', 'desc')
+            }], 'total_amount')
+            ->orderBy('orders_sum_total_amount', 'desc')
             ->limit(10)
             ->get();
 

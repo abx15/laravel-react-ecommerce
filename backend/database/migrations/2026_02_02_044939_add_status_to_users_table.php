@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (!Schema::hasColumn('users', 'status')) {
-                // Use user_type as the anchor since role column might not exist
-                $table->string('status')->default('active')->after('user_type');
+                // Use email as the anchor since user_type might not exist yet
+                $table->string('status')->default('active')->after('email');
             }
         });
     }
