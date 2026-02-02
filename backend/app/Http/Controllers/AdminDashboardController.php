@@ -209,11 +209,22 @@ class AdminDashboardController extends Controller
         ]);
 
         if ($request->hasFile('images')) {
+            $category = \App\Models\Category::find($validated['category_id']);
+            $categoryName = $category ? Str::slug($category->name) : 'uncategorized';
+
             foreach ($request->file('images') as $index => $image) {
-                $path = $image->store('products', 'public');
+                // Generate a unique filename
+                $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+
+                // Define the destination path: public/assets/products/{category}
+                $destinationPath = public_path('assets/products/' . $categoryName);
+
+                // Move the file
+                $image->move($destinationPath, $filename);
+
                 ProductImage::create([
                     'product_id' => $product->id,
-                    'image_path' => '/storage/' . $path,
+                    'image_path' => '/assets/products/' . $categoryName . '/' . $filename,
                     'is_primary' => $index === 0
                 ]);
             }
