@@ -25,7 +25,8 @@ export default {
                     success: '#22C55E',
                     error: '#EF4444',
                     warning: '#F59E0B',
-                }
+                },
+                border: '#E5E7EB', // Gray-200
             }
         },
     },

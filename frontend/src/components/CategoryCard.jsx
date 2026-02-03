@@ -2,37 +2,29 @@ import { Link } from 'react-router-dom';
 
 const CategoryCard = ({ category }) => {
     return (
-        <Link 
+        <Link
             to={`/products?category=${category.id}`}
-            className="block bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden group"
+            className="group block bg-white rounded-lg cursor-pointer hover:shadow-lg transition-transform duration-300 transform hover:scale-105 overflow-hidden border border-gray-100 h-full flex flex-col"
         >
-            <div className="h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <div className="text-white text-center">
-                    <div className="text-4xl mb-2">
-                        {category.name === 'Electronics' && '📱'}
-                        {category.name === 'Clothing' && '👕'}
-                        {category.name === 'Home & Garden' && '🏠'}
-                        {category.name === 'Sports' && '⚽'}
-                        {category.name === 'Books' && '📚'}
-                        {category.name === 'Smartphones' && '📱'}
-                        {category.name === 'Laptops' && '💻'}
-                        {category.name === 'Headphones' && '🎧'}
-                        {category.name === 'Men\'s Clothing' && '👔'}
-                        {category.name === 'Women\'s Clothing' && '👗'}
-                        {category.name === 'Kids Clothing' && '👶'}
-                        {!['Electronics', 'Clothing', 'Home & Garden', 'Sports', 'Books', 'Smartphones', 'Laptops', 'Headphones', 'Men\'s Clothing', 'Women\'s Clothing', 'Kids Clothing'].includes(category.name) && '📦'}
-                    </div>
+            <div className="relative aspect-square bg-[#F7F7F7] flex items-center justify-center p-4">
+                <div className="text-6xl transform group-hover:scale-110 transition-transform duration-300 filter drop-shadow-sm">
+                    {category.name === 'Electronics' && '📱'}
+                    {category.name === 'Fashion' && '👕'}
+                    {category.name === 'Home' && '🏠'}
+                    {category.name === 'Beauty' && '💄'}
+                    {category.name === 'Sports' && '⚽'}
+                    {category.name === 'Books' && '📚'}
+                    {category.name === 'Smartphones' && '📲'}
+                    {category.name === 'Laptops' && '💻'}
+                    {category.name === 'Headphones' && '🎧'}
+                    {!['Electronics', 'Fashion', 'Home', 'Beauty', 'Sports', 'Books', 'Smartphones', 'Laptops', 'Headphones'].includes(category.name) && '📦'}
                 </div>
             </div>
-            <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
+
+            <div className="p-3 text-center flex-grow flex flex-col justify-center">
+                <h3 className="font-bold text-gray-900 group-hover:text-[#C7511F] text-sm md:text-base line-clamp-2">
                     {category.name}
                 </h3>
-                {category.children && category.children.length > 0 && (
-                    <p className="text-sm text-gray-600 mt-1">
-                        {category.children.length} subcategories
-                    </p>
-                )}
             </div>
         </Link>
     );
