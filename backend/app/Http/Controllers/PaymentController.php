@@ -91,6 +91,19 @@ class PaymentController extends Controller
                 ]);
 
                 $lockedOrder->load('items');
+
+                foreach ($lockedOrder->items as $orderedItem) {
+                    $product = \App\Models\Product::whereKey($orderedItem->product_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$product || $product->stock < $orderedItem->quantity) {
+                        throw new \RuntimeException('Insufficient stock while confirming order #' . $lockedOrder->id);
+                    }
+
+                    $product->decrement('stock', $orderedItem->quantity);
+                }
+
                 $cart = Cart::where('user_id', $lockedOrder->user_id)->first();
 
                 if ($cart) {
