@@ -198,6 +198,49 @@ class SuperAdminController extends Controller
         }
     }
 
+
+    /**
+     * Update an administrator account.
+     */
+    public function updateAdmin(Request $request, $id)
+    {
+        $admin = User::where('user_type', 'admin')->findOrFail($id);
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|email|max:255|unique:users,email,' . $admin->id,
+            'password' => 'sometimes|nullable|string|min:8',
+        ]);
+
+        if (!empty($validated['password'])) {
+            $validated['password'] = Hash::make($validated['password']);
+        } else {
+            unset($validated['password']);
+        }
+
+        $admin->fill($validated);
+        $admin->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Administrator updated successfully',
+            'data' => $admin->only(['id', 'name', 'email', 'user_type', 'status', 'updated_at']),
+        ]);
+    }
+
+    /**
+     * Delete an administrator account.
+     */
+    public function deleteAdmin($id)
+    {
+        $admin = User::where('user_type', 'admin')->findOrFail($id);
+        $admin->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Administrator deleted successfully',
+        ]);
+    }
+
     /**
      * Update User Role
      */
