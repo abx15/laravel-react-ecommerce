@@ -69,7 +69,7 @@ const UserDashboard = () => {
   const stats = data?.stats || { total_orders: 0, pending_orders: 0, completed_orders: 0, total_spent: 0 };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20" data-active-tab={activeTab}>
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-xl sticky top-0 z-30 px-8 py-4 flex justify-between items-center shadow-sm border-b border-gray-100">
         <div>
