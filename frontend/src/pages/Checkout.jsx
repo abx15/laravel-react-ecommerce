@@ -111,6 +111,7 @@ const Checkout = () => {
                             razorpay_payment_id: paymentResponse.razorpay_payment_id,
                             razorpay_signature: paymentResponse.razorpay_signature,
                         });
+                        sessionStorage.setItem('lastOrderId', String(orderData.order.id));
                         navigate('/order-success', {
                             replace: true,
                             state: { order: verification.data?.data || orderData.order },
