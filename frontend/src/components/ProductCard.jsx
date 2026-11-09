@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, Star, Heart } from 'lucide-react';
-import api from '../services/api';
+import api, { assetUrl } from '../services/api';
 
 const ProductCard = ({ product }) => {
     const { user } = useAuth();
@@ -34,7 +34,7 @@ const ProductCard = ({ product }) => {
             {/* Image Container */}
             <Link to={`/products/${product.id}`} className="block relative pt-4 px-4 h-52 flex items-center justify-center bg-white group-hover:scale-105 transition-transform duration-300">
                 <img
-                    src={product.images && product.images.length > 0 ? product.images[0].image_path : '/placeholder.jpg'}
+                    src={assetUrl(product.images?.[0]?.image_path)}
                     alt={product.name}
                     className="max-h-full max-w-full object-contain"
                     loading="lazy"
@@ -74,7 +74,7 @@ const ProductCard = ({ product }) => {
                     {/* Add to Cart Button (Hidden by default, shown on hover/mobile) */}
                     <button
                         onClick={addToCart}
-                        className="w-full mt-3 bg-[#FFD814] hover:bg-[#F7CA00] text-black border border-[#FCD200] rounded-full py-2 text-sm font-medium transition-colors shadow-sm active:scale-95 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        className="w-full mt-3 bg-[#FFD814] hover:bg-[#F7CA00] text-black border border-[#FCD200] rounded-full py-2 text-sm font-medium transition-colors shadow-sm active:scale-95 flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200"
                     >
                         <ShoppingCart className="w-4 h-4" /> Add to Cart
                     </button>
