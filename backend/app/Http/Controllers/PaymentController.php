@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Traits\ApiResponse;
@@ -87,6 +89,29 @@ class PaymentController extends Controller
                     'payment_status' => 'paid',
                     'status' => 'processing',
                 ]);
+
+                $lockedOrder->load('items');
+                $cart = Cart::where('user_id', $lockedOrder->user_id)->first();
+
+                if ($cart) {
+                    foreach ($lockedOrder->items as $orderedItem) {
+                        $cartItem = CartItem::where('cart_id', $cart->id)
+                            ->where('product_id', $orderedItem->product_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (!$cartItem) {
+                            continue;
+                        }
+
+                        $remainingQuantity = max(0, (int) $cartItem->quantity - (int) $orderedItem->quantity);
+                        if ($remainingQuantity === 0) {
+                            $cartItem->delete();
+                        } else {
+                            $cartItem->update(['quantity' => $remainingQuantity]);
+                        }
+                    }
+                }
             });
 
             return $this->success($order->fresh()->load('payment'), 'Payment verified successfully');
