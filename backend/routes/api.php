@@ -78,6 +78,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/admin/users', [AdminDashboardController::class, 'getUsers']);
         Route::get('/admin/seller-requests', [AdminDashboardController::class, 'getSellerRequests']);
         Route::get('/admin/analytics', [AdminDashboardController::class, 'getAnalytics']);
+        Route::post('/admin/categories', [CategoryController::class, 'store']);
+        Route::put('/admin/categories/{category}', [CategoryController::class, 'update']);
+        Route::delete('/admin/categories/{category}', [CategoryController::class, 'destroy']);
+        Route::patch('/admin/orders/{order}/status', [OrderController::class, 'updateStatus']);
 
         Route::post('/admin/products', [AdminDashboardController::class, 'storeProduct']);
         Route::put('/admin/products/{product}', [AdminDashboardController::class, 'updateProduct']);
@@ -100,6 +104,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // User Management
         Route::post('/admins', [SuperAdminController::class, 'createAdmin']);
+        Route::put('/admins/{id}', [SuperAdminController::class, 'updateAdmin']);
+        Route::delete('/admins/{id}', [SuperAdminController::class, 'deleteAdmin']);
         Route::put('/users/{id}/role', [SuperAdminController::class, 'updateUserRole']);
         Route::delete('/users/{id}', [SuperAdminController::class, 'deleteUser']);
     });
