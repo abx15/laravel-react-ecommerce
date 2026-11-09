@@ -15,6 +15,7 @@ const ProductCard = ({ product }) => {
         }
         try {
             await api.post('/cart/add', { product_id: product.id, quantity: 1 });
+            window.dispatchEvent(new Event('cart:updated'));
             alert('Added to cart!'); // Replace with toast later
         } catch (error) {
             console.error(error);
