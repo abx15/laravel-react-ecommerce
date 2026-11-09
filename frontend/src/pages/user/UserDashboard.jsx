@@ -35,8 +35,8 @@ const UserDashboard = () => {
         api.get('/user/dashboard'), // Assuming this exists or falls back
         api.get('/user/orders')
       ]);
-      setData(dashboardRes.data);
-      setOrders(ordersRes.data.data || []);
+      setData(dashboardRes.data.data || dashboardRes.data);
+      setOrders(ordersRes.data.data?.data || ordersRes.data.data || []);
     } catch (error) {
       console.error("User Data Error", error);
     } finally {
@@ -88,7 +88,7 @@ const UserDashboard = () => {
           <StatCard title="Total Orders" value={stats.total_orders} icon={<FiPackage />} gradient="bg-gradient-to-br from-indigo-500 to-blue-600" delay={0.1} />
           <StatCard title="Pending" value={stats.pending_orders} icon={<FiClock />} gradient="bg-gradient-to-br from-orange-400 to-pink-500" delay={0.2} />
           <StatCard title="Completed" value={stats.completed_orders} icon={<FiCheckCircle />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" delay={0.3} />
-          <StatCard title="Total Spent" value={`$${stats.total_spent}`} icon={<FiShoppingBag />} gradient="bg-gradient-to-br from-violet-500 to-purple-600" delay={0.4} />
+          <StatCard title="Total Spent" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(stats.total_spent || 0))} icon={<FiShoppingBag />} gradient="bg-gradient-to-br from-violet-500 to-purple-600" delay={0.4} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
