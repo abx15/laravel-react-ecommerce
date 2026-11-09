@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import { Menu, Search, ShoppingCart, User, Heart, X, ChevronDown } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -8,6 +9,28 @@ const Navbar = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [cartCount, setCartCount] = useState(0);
+
+    useEffect(() => {
+        if (!user) { setCartCount(0); return undefined; }
+        const loadCartCount = async () => {
+            try {
+                const response = await api.get('/cart');
+                const items = response.data?.data?.items || [];
+                setCartCount(items.reduce((total, item) => total + Number(item.quantity || 0), 0));
+            } catch { setCartCount(0); }
+        };
+        loadCartCount();
+        window.addEventListener('cart:updated', loadCartCount);
+        return () => window.removeEventListener('cart:updated', loadCartCount);
+    }, [user]);
+
+    const handleSearch = () => {
+        const query = searchTerm.trim();
+        navigate(query ? '/products?search=' + encodeURIComponent(query) : '/products');
+        setIsMenuOpen(false);
+    };
 
     // Unused state placeholder
     const searchCategory = 'All';
@@ -44,11 +67,14 @@ const Navbar = () => {
                         <ChevronDown className="w-3 h-3" />
                     </div>
                     <input
-                        type="text"
+                        type="search"
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        onKeyDown={(event) => { if (event.key === 'Enter') handleSearch(); }}
                         placeholder="Search OpenShop"
                         className="flex-1 px-3 text-black focus:outline-none"
                     />
-                    <button className="bg-[#FEBD69] hover:bg-[#F3A847] w-12 flex items-center justify-center transition-colors">
+                    <button type="button" onClick={handleSearch} className="bg-[#FEBD69] hover:bg-[#F3A847] w-12 flex items-center justify-center transition-colors">
                         <Search className="w-6 h-6 text-black" />
                     </button>
                 </div>
@@ -102,7 +128,7 @@ const Navbar = () => {
                     <Link to="/cart" className="flex items-end p-2 hover:border hover:border-white rounded cursor-pointer relative">
                         <div className="relative">
                             <ShoppingCart className="w-8 h-8" />
-                            <span className="absolute -top-1 left-1/2 -translate-x-1/2 text-[#F08804] font-bold text-base">0</span>
+                            <span className="absolute -top-1 left-1/2 -translate-x-1/2 text-[#F08804] font-bold text-base">{cartCount > 99 ? "99+" : cartCount}</span>
                         </div>
                         <span className="font-bold hidden lg:inline mb-1">Cart</span>
                     </Link>
@@ -113,11 +139,14 @@ const Navbar = () => {
             <div className="lg:hidden bg-[#232f3e] p-3">
                 <div className="h-10 bg-white rounded-md flex overflow-hidden">
                     <input
-                        type="text"
+                        type="search"
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        onKeyDown={(event) => { if (event.key === 'Enter') handleSearch(); }}
                         placeholder="Search OpenShop"
                         className="flex-1 px-3 text-black focus:outline-none"
                     />
-                    <button className="bg-[#FEBD69] w-10 flex items-center justify-center">
+                    <button type="button" onClick={handleSearch} className="bg-[#FEBD69] w-10 flex items-center justify-center">
                         <Search className="w-5 h-5 text-black" />
                     </button>
                 </div>
