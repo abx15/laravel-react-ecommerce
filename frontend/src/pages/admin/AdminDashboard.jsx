@@ -194,7 +194,7 @@ const AdminDashboard = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Revenue" value={`$${Number(stats?.stats?.revenue || 0).toLocaleString('en-IN')}`} icon={<FiDollarSign />} gradient="bg-gradient-to-br from-blue-500 to-indigo-600" />
+          <StatCard title="Revenue" value={`₹${Number(stats?.stats?.revenue || 0).toLocaleString('en-IN')}`} icon={<FiDollarSign />} gradient="bg-gradient-to-br from-blue-500 to-indigo-600" />
           <StatCard title="Orders" value={stats?.stats?.total_orders || 0} icon={<FiShoppingCart />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" />
           <StatCard title="Users" value={stats?.stats?.total_users || 0} icon={<FiUsers />} gradient="bg-gradient-to-br from-violet-500 to-purple-600" />
           <StatCard title="Sellers" value={stats?.stats?.total_sellers || 0} icon={<FiUsers />} gradient="bg-gradient-to-br from-orange-400 to-pink-500" />
@@ -266,7 +266,7 @@ const AdminDashboard = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">{product.seller?.shop_name || 'Admin'}</td>
-                          <td className="px-6 py-4 text-sm font-bold text-gray-900">${Number(product.price || 0).toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-900">₹{Number(product.price || 0).toLocaleString('en-IN')}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
                               <button onClick={() => initiateEdit(product)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><FiEdit2 /></button>
