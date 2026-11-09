@@ -32,7 +32,7 @@ class AdminDashboardController extends Controller
                 'pending_sellers' => Seller::where('status', 'pending')->count(),
                 'total_products' => Product::count(),
                 'total_orders' => Order::count(),
-                'revenue' => Order::where('status', 'completed')->sum('total_amount') ?? 0,
+                'revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
             ];
 
             // Daily/Weekly Orders
@@ -43,7 +43,7 @@ class AdminDashboardController extends Controller
                 ->get();
 
             // Revenue Trend (Last 30 days)
-            $revenueTrend = Order::where('status', 'completed')
+            $revenueTrend = Order::where('payment_status', 'paid')
                 ->where('created_at', '>=', Carbon::now()->subDays(30))
                 ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue')
                 ->groupBy('date')
@@ -293,7 +293,7 @@ class AdminDashboardController extends Controller
         $sellerPerformance = User::where('user_type', 'seller')
             ->where('is_seller_verified', true)
             ->withCount(['products', 'orders' => function ($query) {
-                $query->where('status', 'completed');
+                $query->where('payment_status', 'paid');
             }])
             ->withSum(['orders' => function ($query) {
                 $query->where('status', 'completed');
