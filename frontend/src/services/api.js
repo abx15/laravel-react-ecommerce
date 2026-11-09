@@ -1,18 +1,34 @@
 import axios from 'axios';
 
+const trimTrailingSlashes = (value) => {
+    let result = value;
+    while (result.endsWith('/')) result = result.slice(0, -1);
+    return result;
+};
+
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL;
-const apiBaseURL = (configuredApiUrl || 'http://localhost:8000/api').replace(/\\/+$/, '');
-export const API_BASE_URL = apiBaseURL;
-export const API_ORIGIN = apiBaseURL.replace(/\\/api\\/?$/, '');
+export const API_BASE_URL = trimTrailingSlashes(configuredApiUrl || 'http://localhost:8000/api');
+export const API_ORIGIN = API_BASE_URL.endsWith('/api')
+    ? API_BASE_URL.slice(0, -4)
+    : API_BASE_URL;
 
 export const assetUrl = (path) => {
     if (!path) return '/placeholder.jpg';
-    if (/^(https?:)?\\/\\//i.test(path) || path.startsWith('data:') || path.startsWith('blob:')) return path;
-    return API_ORIGIN + '/' + String(path).replace(/^\\/+/, '');
+    if (
+        path.startsWith('https://')
+        || path.startsWith('http://')
+        || path.startsWith('//')
+        || path.startsWith('data:')
+        || path.startsWith('blob:')
+    ) return path;
+
+    let normalizedPath = String(path);
+    while (normalizedPath.startsWith('/')) normalizedPath = normalizedPath.slice(1);
+    return API_ORIGIN + '/' + normalizedPath;
 };
 
 const api = axios.create({
-    baseURL: apiBaseURL,
+    baseURL: API_BASE_URL,
     timeout: 20000,
     headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
 });
@@ -27,7 +43,11 @@ api.interceptors.request.use((config) => {
 }, (error) => Promise.reject(error));
 
 api.interceptors.response.use((response) => response, (error) => {
-    if (error.response?.status === 401 && localStorage.getItem('token') && !['/login', '/register'].some((path) => error.config?.url?.includes(path))) {
+    if (
+        error.response?.status === 401
+        && localStorage.getItem('token')
+        && !['/login', '/register'].some((path) => error.config?.url?.includes(path))
+    ) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.dispatchEvent(new Event('auth:unauthorized'));
