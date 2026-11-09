@@ -238,6 +238,71 @@ const SellerDashboard = () => {
               </div>
             )}
 
+            {activeTab === 'orders' && (
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-100">
+                  <h3 className="text-lg font-bold text-gray-900">Customer orders</h3>
+                  <p className="mt-1 text-sm text-gray-500">Orders containing your products.</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Order</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Customer</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Items</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Order total</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {orders.map(order => (
+                        <tr key={order.id}>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">#{order.id}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{order.user?.name || 'Customer'}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{order.order_items?.length || order.orderItems?.length || 0}</td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{Number(order.total_amount || 0).toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4"><span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold capitalize text-gray-700">{order.status}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!orders.length && <p className="py-10 text-center text-sm text-gray-500">No orders yet.</p>}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'analytics' && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-900">Sales over the last 30 days</h3>
+                  <div className="mt-5 h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={stats?.charts?.sales_over_time || []}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="revenue" stroke="#059669" fill="#A7F3D0" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </section>
+                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-900">Top selling products</h3>
+                  <div className="mt-5 space-y-3">
+                    {(stats?.charts?.top_selling_products || []).map(product => (
+                      <div key={product.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+                        <span className="font-medium text-gray-800">{product.name}</span>
+                        <span className="text-sm font-semibold text-emerald-700">{product.order_items_count || 0} sold</span>
+                      </div>
+                    ))}
+                    {!stats?.charts?.top_selling_products?.length && <p className="py-8 text-sm text-gray-500">Sales analytics will appear after your first orders.</p>}
+                  </div>
+                </section>
+              </div>
+            )}
+
             {activeTab === 'products' && (
               <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
