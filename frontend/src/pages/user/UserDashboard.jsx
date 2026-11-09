@@ -141,7 +141,7 @@ const UserDashboard = () => {
               <div className="flex flex-col items-center mb-8">
                 <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 p-1 mb-4">
                   <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
-                    <span className="text-3xl font-bold text-gray-800">{user.name[0]}</span>
+                    <span className="text-3xl font-bold text-gray-800">{(user.name || 'U')[0]}</span>
                   </div>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">{user.name}</h3>
@@ -149,12 +149,12 @@ const UserDashboard = () => {
               </div>
 
               <div className="space-y-3">
-                <button className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                <Link to="/profile" className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex items-center gap-3 text-gray-700 font-medium">
                     <FiUser /> Edit Profile
                   </div>
                   <span className="text-gray-400">→</span>
-                </button>
+                </Link>
                 <button className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex items-center gap-3 text-gray-700 font-medium">
                     <FiMapPin /> Addresses
