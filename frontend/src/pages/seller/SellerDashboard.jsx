@@ -214,7 +214,7 @@ const SellerDashboard = () => {
 
         {/* Stats Grid (Hidden on mobile for brevity) */}
         <div className="hidden lg:grid grid-cols-4 gap-6">
-          <StatCard title="Total Revenue" value={`$${stats?.my_revenue || 0}`} icon={<FiDollarSign />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" trend={12.5} />
+          <StatCard title="Total Revenue" value={`₹${stats?.my_revenue || 0}`} icon={<FiDollarSign />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" trend={12.5} />
           <StatCard title="Products" value={stats?.my_products_count || 0} icon={<FiPackage />} gradient="bg-gradient-to-br from-blue-500 to-indigo-600" trend={8.1} />
           <StatCard title="Orders" value={stats?.my_orders || 0} icon={<FiShoppingCart />} gradient="bg-gradient-to-br from-orange-400 to-pink-500" trend={15.4} />
           <StatCard title="Avg Rating" value="4.8" icon={<FiStar />} gradient="bg-gradient-to-br from-purple-500 to-violet-600" trend={0.0} />
@@ -272,7 +272,7 @@ const SellerDashboard = () => {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <span className="text-sm font-bold text-emerald-600">${product.price}</span>
+                              <span className="text-sm font-bold text-emerald-600">₹{product.price}</span>
                               {product.original_price && <span className="text-xs text-gray-400 line-through">${product.original_price}</span>}
                               {product.discount_percentage > 0 && <span className="text-xs text-green-600 font-medium">{product.discount_percentage}% OFF</span>}
                             </div>
