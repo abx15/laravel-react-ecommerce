@@ -30,13 +30,22 @@ class SellerController extends Controller
             'bank_details.bank_name' => 'required|string',
         ]);
 
-        if ($request->user()->sellerProfile) {
-            return $this->error('You are already registered as a seller.', 400);
+        $user = $request->user();
+
+        if ($user->is_blocked || $user->status !== 'active') {
+            return $this->error('Your account is inactive or blocked.', 403);
+        }
+
+        if ($user->isAdmin() || $user->isSuperAdmin()) {
+            return $this->error('Administrator accounts cannot register as sellers.', 403);
+        }
+
+        if ($user->isSeller() || $user->sellerProfile) {
+            return $this->error('You already have a seller application or account.', 409);
         }
 
         $idProofPath = $request->file('id_proof')->store('seller_proofs', 'public');
 
-        $user = $request->user();
         $user->update(['user_type' => 'seller']);
         $user->syncRoles(['user', 'seller']);
 
