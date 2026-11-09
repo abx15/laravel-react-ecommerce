@@ -16,46 +16,57 @@ class SuperAdminController extends Controller
      */
     public function getDashboardStats()
     {
-        try {
-            // Count users by user_type (robust check)
-            $totalUsers = User::whereIn('user_type', ['user', 'User'])->count();
-            $totalAdmins = User::whereIn('user_type', ['admin', 'Admin'])->count();
-            $totalSellers = User::whereIn('user_type', ['seller', 'Seller'])->count();
+        $now = now();
+        $currentStart = $now->copy()->subDays(30);
+        $previousStart = $now->copy()->subDays(60);
 
-            // Calculate total revenue (if Order model exists)
-            $totalRevenue = 0;
-            if (class_exists(Order::class)) {
-                $totalRevenue = Order::where('status', 'delivered')
-                    ->sum('total_amount');
+        $growth = static function (float|int $current, float|int $previous): float {
+            if ($previous <= 0) {
+                return $current > 0 ? 100.0 : 0.0;
             }
 
-            // Mock growth percentages (you can calculate real growth later)
-            $stats = [
-                'total_users' => $totalUsers, // Changed key to match frontend expectation snake_case
-                'total_admins' => $totalAdmins,
-                'total_sellers' => $totalSellers,
-                'total_revenue' => $totalRevenue,
-                'user_growth' => 18.2,
-                'admin_growth' => 5.4,
-                'seller_growth' => 12.3,
-                'revenue_growth' => -22.1
-            ];
+            return round((($current - $previous) / $previous) * 100, 1);
+        };
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Dashboard stats fetched successfully',
-                'data' => [
-                    'stats' => $stats,
-                    'charts' => []
-                ]
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching dashboard statistics',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $totalUsers = User::where('user_type', 'user')->count();
+        $totalAdmins = User::where('user_type', 'admin')->count();
+        $totalSellers = User::where('user_type', 'seller')->count();
+
+        $currentRevenue = (float) Order::where('payment_status', 'paid')
+            ->where('created_at', '>=', $currentStart)
+            ->sum('total_amount');
+        $previousRevenue = (float) Order::where('payment_status', 'paid')
+            ->whereBetween('created_at', [$previousStart, $currentStart])
+            ->sum('total_amount');
+
+        $stats = [
+            'total_users' => $totalUsers,
+            'total_admins' => $totalAdmins,
+            'total_sellers' => $totalSellers,
+            'total_revenue' => (float) Order::where('payment_status', 'paid')->sum('total_amount'),
+            'user_growth' => $growth(
+                User::where('user_type', 'user')->where('created_at', '>=', $currentStart)->count(),
+                User::where('user_type', 'user')->whereBetween('created_at', [$previousStart, $currentStart])->count()
+            ),
+            'admin_growth' => $growth(
+                User::where('user_type', 'admin')->where('created_at', '>=', $currentStart)->count(),
+                User::where('user_type', 'admin')->whereBetween('created_at', [$previousStart, $currentStart])->count()
+            ),
+            'seller_growth' => $growth(
+                User::where('user_type', 'seller')->where('created_at', '>=', $currentStart)->count(),
+                User::where('user_type', 'seller')->whereBetween('created_at', [$previousStart, $currentStart])->count()
+            ),
+            'revenue_growth' => $growth($currentRevenue, $previousRevenue),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Platform statistics fetched successfully',
+            'data' => [
+                'stats' => $stats,
+                'charts' => [],
+            ],
+        ]);
     }
 
     /**
