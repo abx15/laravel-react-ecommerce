@@ -19,14 +19,15 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'user_type' => 'sometimes|in:user,seller',
+            'mobile' => 'nullable|string|max:20|unique:users,mobile',
         ]);
 
-        $userType = $validated['user_type'] ?? 'user';
+        $userType = 'user';
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'mobile' => $validated['mobile'] ?? null,
             'password' => Hash::make($validated['password']),
             'user_type' => $userType,
         ]);
@@ -60,6 +61,10 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $request->email)->firstOrFail();
+        if ($user->is_blocked) {
+            Auth::logout();
+            return $this->error('Your account is currently blocked. Please contact support.', 403);
+        }
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->success([
