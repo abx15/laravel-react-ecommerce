@@ -147,7 +147,7 @@ class OrderController extends Controller
                     'currency' => 'INR',
                     'key' => config('services.razorpay.key'),
                 ];
-            }, 3);
+            });
 
             return $this->success($result, 'Order created. Complete payment to confirm it.', 201);
         } catch (ValidationException $e) {
