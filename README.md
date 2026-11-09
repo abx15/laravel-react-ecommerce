@@ -91,7 +91,7 @@ The `frontend/vercel.json` rewrite supports React Router deep links. If deployin
 
 ### Render — Laravel API
 
-Create a PHP-capable Render web service connected to this repository and configure the backend as the service root/build context. The exact build and start commands depend on the selected PHP runtime or Docker deployment. Ensure the service runs Laravel's HTTP entry point (not `php artisan serve` as a production server), serves the `backend/public` directory, and has writable `storage` and `bootstrap/cache` directories.
+Create a **Docker** web service on Render connected to this repository with these settings:\n\n- **Root Directory:** `backend`\n- **Environment:** Docker\n- **Dockerfile Path:** `./Dockerfile` (relative to the backend root)\n- **Health Check Path:** `/up`\n\nThe backend image runs Nginx + PHP-FPM under Supervisor and serves Laravel from `backend/public`. The image includes the Nginx and Supervisor configuration files under `backend/docker/`. Ensure `storage` and `bootstrap/cache` remain writable. Provision a managed MySQL database and attach its private connection details to the service.
 
 Configure at minimum:
 
@@ -103,7 +103,7 @@ Configure at minimum:
 - `CORS_ALLOWED_ORIGINS=https://YOUR-FRONTEND-DOMAIN`
 - `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` (only if payments are enabled)
 
-Run migrations as a controlled release/deploy step: `php artisan migrate --force`. Configure persistent storage for user-uploaded files, and use managed database/Redis services where required. Never use the demo seed accounts or development credentials in production.
+Run migrations as a controlled release/deploy step: `php artisan migrate --force` (run from the backend application directory). Configure persistent storage or object storage for user-uploaded files; the container filesystem is ephemeral. Use managed database/Redis services where required. Never use the demo seed accounts or development credentials in production.
 
 > **Deployment status:** These instructions describe the intended split deployment. A successful production deployment still requires valid hosting accounts, environment variables, database provisioning, storage configuration, and a live smoke test.
 
