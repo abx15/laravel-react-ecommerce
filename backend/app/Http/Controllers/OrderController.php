@@ -138,7 +138,6 @@ class OrderController extends Controller
                 ]);
 
                 $order->update(['razorpay_order_id' => $razorpayOrder->id]);
-                $cart->items()->delete();
 
                 return [
                     'order' => $order->load(['items.product.images', 'address']),
