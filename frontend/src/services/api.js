@@ -1,13 +1,13 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:8000/api',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
     headers: {
-        'Accept': 'application/json'
-    }
+        Accept: 'application/json',
+    },
 });
 
-// Add a request interceptor
+// Attach the current Sanctum personal access token to API requests.
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -19,13 +19,12 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Add a response interceptor
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
+        if (error.response?.status === 401) {
             localStorage.removeItem('token');
-            // window.location.href = '/login'; // Optional: Redirect to login
+            localStorage.removeItem('user');
         }
         return Promise.reject(error);
     }
