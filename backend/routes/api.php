@@ -27,16 +27,14 @@ Route::get('/categories', [CategoryController::class, 'index']);
 // Protected Routes (require authentication)
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
-    Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::delete('/product-images/{id}', [ProductController::class, 'deleteImage']);
 
     // Cart Routes (require authentication)
     Route::get('/cart', [CartController::class, 'index']);
-    Route::post('/cart/add', [CartController::class, 'add']);
-    Route::put('/cart/update', [CartController::class, 'update']);
-    Route::delete('/cart/remove', [CartController::class, 'remove']);
-    Route::delete('/cart/clear', [CartController::class, 'clear']);
+    Route::post('/cart/add', [CartController::class, 'store']);
+    Route::put('/cart/{cartItem}', [CartController::class, 'update']);
+    Route::delete('/cart/{cartItem}', [CartController::class, 'destroy']);
 
     // Order Routes (require authentication)
     Route::post('/orders', [OrderController::class, 'store']);
@@ -44,8 +42,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/orders/{order}', [OrderController::class, 'show']);
 
     // Payment Routes (require authentication)
-    Route::post('/payments', [PaymentController::class, 'store']);
-    Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+    Route::post('/payment/verify', [PaymentController::class, 'verifyPayment']);
 
     // Seller Registration (require authentication)
     Route::post('/sellers', [SellerController::class, 'store']);
@@ -60,19 +57,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/user/profile', [UserDashboardController::class, 'updateProfile']);
     });
 
-    // Seller Dashboard Routes
-    Route::middleware(['role:seller'])->group(function () {
-        Route::get('/seller/dashboard', [SellerDashboardController::class, 'dashboard']);
-        Route::get('/seller/products', [ProductController::class, 'sellerProducts']);
-        Route::post('/seller/products', [ProductController::class, 'store']);
-        Route::put('/seller/products/{product}', [ProductController::class, 'update']);
-        Route::delete('/seller/products/{product}', [ProductController::class, 'destroy']);
-        Route::get('/seller/orders', [SellerDashboardController::class, 'getOrders']);
-        Route::get('/seller/products-list', [SellerDashboardController::class, 'getProducts']);
-        Route::get('/seller/analytics', [SellerDashboardController::class, 'getAnalytics']);
-    });
-
-    // Verified Seller Routes
+    // Seller routes are restricted to verified sellers.
     Route::middleware(['role:seller', 'seller.verified'])->group(function () {
         Route::get('/seller/dashboard', [SellerDashboardController::class, 'dashboard']);
         Route::get('/seller/products', [ProductController::class, 'sellerProducts']);
