@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './layouts/Layout';
 import DashboardLayout from './layouts/DashboardLayout';
@@ -21,6 +22,17 @@ import ProductForm from './pages/seller/ProductForm';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import AdminDashboardNew from './pages/admin/AdminDashboard';
 import UserDashboard from './pages/user/UserDashboard';
+import NotFound from './pages/NotFound';
+
+const PageTitle = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const segment = pathname.split('/').filter(Boolean).pop();
+    const page = segment ? segment.replace(/[-_]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'Home';
+    document.title = page + ' | OpenShop';
+  }, [pathname]);
+  return null;
+};
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -42,6 +54,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <PageTitle />
         <Routes>
           <Route element={<Layout />}>
             {/* Public Routes */}
@@ -204,6 +217,7 @@ function App() {
                 </DashboardLayout>
               </ProtectedRoute>
             } />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </AuthProvider>
