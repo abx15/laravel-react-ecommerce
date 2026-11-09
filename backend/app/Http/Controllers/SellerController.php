@@ -36,8 +36,14 @@ class SellerController extends Controller
 
         $idProofPath = $request->file('id_proof')->store('seller_proofs', 'public');
 
+        $user = $request->user();
+        $user->update(['user_type' => 'seller']);
+        if (!$user->hasRole('seller')) {
+            $user->assignRole('seller');
+        }
+
         $seller = Seller::create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'shop_name' => $request->shop_name,
             'shop_address' => $request->shop_address,
             'city' => $request->city,
