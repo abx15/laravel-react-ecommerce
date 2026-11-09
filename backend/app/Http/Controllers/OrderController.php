@@ -36,8 +36,9 @@ class OrderController extends Controller
     public function show(Order $order, Request $request)
     {
         if (
-            $order->user_id !== $request->user()->id
-            && !$request->user()->hasRole(['admin', 'super_admin'])
+            (int) $order->user_id !== (int) $request->user()->id
+            && !$request->user()->isAdmin()
+            && !$request->user()->isSuperAdmin()
         ) {
             return $this->error('Unauthorized', 403);
         }
