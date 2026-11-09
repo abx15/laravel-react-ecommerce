@@ -194,7 +194,8 @@ class AdminDashboardController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+            'images' => 'sometimes|array|max:8',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120'
         ]);
 
         $product = Product::create([
@@ -218,6 +219,7 @@ class AdminDashboardController extends Controller
 
                 // Define the destination path: public/assets/products/{category}
                 $destinationPath = public_path('assets/products/' . $categoryName);
+                File::ensureDirectoryExists($destinationPath);
 
                 // Move the file
                 $image->move($destinationPath, $filename);
