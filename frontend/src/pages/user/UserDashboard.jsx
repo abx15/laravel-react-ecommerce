@@ -118,7 +118,7 @@ const UserDashboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">${order.total_amount}</p>
+                      <p className="font-bold text-gray-900">₹{Number(order.total_amount || 0).toLocaleString("en-IN")}</p>
                       <span className={`text-xs px-2 py-1 rounded-full font-bold ${order.status === 'completed' ? 'bg-green-100 text-green-700' :
                         order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'
                         }`}>
