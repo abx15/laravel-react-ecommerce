@@ -117,4 +117,56 @@ class RoleAccessTest extends TestCase
             'password' => 'StrongPass123!',
         ])->assertForbidden();
     }
+    public function test_customer_addresses_are_private_to_the_owner(): void
+    {
+        $owner = $this->account('user');
+        $other = $this->account('user');
+        $address = Address::create([
+            'user_id' => $owner->id,
+            'address_line_1' => 'Private address',
+            'city' => 'Jaipur',
+            'state' => 'Rajasthan',
+            'zip_code' => '302001',
+            'country' => 'India',
+        ]);
+
+        Sanctum::actingAs($other);
+        $this->putJson('/api/addresses/' . $address->id, [
+            'address_line_1' => 'Changed by another user',
+        ])->assertForbidden();
+
+        $this->deleteJson('/api/addresses/' . $address->id)->assertForbidden();
+        $this->assertDatabaseHas('addresses', [
+            'id' => $address->id,
+            'address_line_1' => 'Private address',
+        ]);
+    }
+
+    public function test_wishlist_is_scoped_to_the_authenticated_customer(): void
+    {
+        $owner = $this->account('user');
+        $other = $this->account('user');
+        $category = \App\Models\Category::create([
+            'name' => 'Test Category',
+            'slug' => 'test-category',
+        ]);
+        $product = \App\Models\Product::create([
+            'name' => 'Test Product',
+            'slug' => 'test-product',
+            'description' => 'Test description',
+            'price' => 100,
+            'stock' => 5,
+            'category_id' => $category->id,
+            'seller_id' => $owner->id,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->postJson('/api/wishlist', ['product_id' => $product->id])->assertCreated();
+        $this->getJson('/api/wishlist')->assertOk()->assertJsonPath('data.data.0.product.id', $product->id);
+
+        Sanctum::actingAs($other);
+        $this->getJson('/api/wishlist')->assertOk()->assertJsonPath('data.data', []);
+    }
+
 }
