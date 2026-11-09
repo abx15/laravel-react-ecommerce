@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -145,6 +146,25 @@ class SuperAdminController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+
+    public function getAllOrders()
+    {
+        $orders = Order::with(['user', 'items.product', 'payment'])
+            ->latest()
+            ->paginate(25);
+
+        return response()->json(['success' => true, 'data' => $orders]);
+    }
+
+    public function getAllProducts()
+    {
+        $products = Product::with(['category', 'seller', 'images'])
+            ->latest()
+            ->paginate(25);
+
+        return response()->json(['success' => true, 'data' => $products]);
     }
 
     /**
