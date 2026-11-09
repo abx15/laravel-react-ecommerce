@@ -24,6 +24,7 @@ const ProductDetail = () => {
         }
         try {
             await api.post('/cart/add', { product_id: product.id, quantity });
+            window.dispatchEvent(new Event('cart:updated'));
             alert('Added to cart');
         } catch (err) {
             console.error(err);
