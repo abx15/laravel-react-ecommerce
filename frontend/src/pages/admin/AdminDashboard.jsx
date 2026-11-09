@@ -25,6 +25,9 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [sellerRequests, setSellerRequests] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryBusy, setCategoryBusy] = useState(false);
+  const [notice, setNotice] = useState('');
 
   // UI States
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,6 +43,8 @@ const AdminDashboard = () => {
     const path = location.pathname;
     if (path.includes('/products')) setActiveTab('products');
     else if (path.includes('/orders')) setActiveTab('orders');
+    else if (path.includes('/categories')) setActiveTab('categories');
+    else if (path.includes('/users')) setActiveTab('users');
     else if (path.includes('/sellers') || path.includes('/seller-requests')) setActiveTab('sellers');
     else setActiveTab('overview');
   }, [location]);
@@ -51,7 +56,7 @@ const AdminDashboard = () => {
 
   // Fetch Categories on products tab
   useEffect(() => {
-    if (activeTab === 'products') {
+    if (activeTab === 'products' || activeTab === 'categories') {
       api.get('/categories').then(res => setCategories(res.data.data || [])).catch(console.error);
     }
   }, [activeTab]);
@@ -79,6 +84,50 @@ const AdminDashboard = () => {
       console.error("Dashboard Load Error", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const handleCreateCategory = async (event) => {
+    event.preventDefault();
+    const name = categoryName.trim();
+    if (!name) return;
+    setCategoryBusy(true);
+    setNotice('');
+    try {
+      await api.post('/admin/categories', { name });
+      setCategoryName('');
+      const response = await api.get('/categories');
+      setCategories(response.data?.data || []);
+      setNotice('Category created successfully.');
+    } catch (error) {
+      setNotice(error.response?.data?.message || 'Could not create category.');
+    } finally {
+      setCategoryBusy(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category) => {
+    if (!window.confirm('Delete category "' + category.name + '"?')) return;
+    setNotice('');
+    try {
+      await api.delete('/admin/categories/' + category.id);
+      setCategories((current) => current.filter((item) => item.id !== category.id));
+      setNotice('Category deleted.');
+    } catch (error) {
+      setNotice(error.response?.data?.message || 'Could not delete category.');
+    }
+  };
+
+  const handleOrderStatus = async (orderId, status) => {
+    setNotice('');
+    try {
+      await api.patch('/admin/orders/' + orderId + '/status', { status });
+      setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
+      setNotice('Order #' + orderId + ' updated.');
+    } catch (error) {
+      setNotice(error.response?.data?.message || 'Could not update order status.');
+      fetchDashboardData();
     }
   };
 
@@ -191,6 +240,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="mx-auto max-w-7xl p-8 space-y-8">
+        {notice && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{notice}</div>}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -203,7 +253,7 @@ const AdminDashboard = () => {
         {/* Main Tabs */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
           <div className="border-b border-gray-100 px-6 py-4 flex gap-6 overflow-x-auto">
-            {['overview', 'products', 'sellers', 'users', 'orders'].map(tab => (
+            {['overview', 'products', 'categories', 'sellers', 'users', 'orders'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-sm font-semibold pb-4 pt-2 -mb-4 border-b-2 transition-colors ${activeTab === tab ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
                 {tab}
               </button>
@@ -279,6 +329,29 @@ const AdminDashboard = () => {
                   </table>
                 </div>
               </div>
+            )}
+
+
+            {activeTab === 'categories' && (
+              <section className="space-y-6">
+                <div>
+                  <h4 className="text-lg font-bold text-gray-900">Category management</h4>
+                  <p className="mt-1 text-sm text-gray-500">Organise the storefront catalogue with clear product categories.</p>
+                </div>
+                <form onSubmit={handleCreateCategory} className="flex flex-col sm:flex-row gap-3">
+                  <input value={categoryName} onChange={(event) => setCategoryName(event.target.value)} placeholder="New category name" maxLength={255} className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" required />
+                  <button disabled={categoryBusy} className="rounded-xl bg-gray-900 px-6 py-3 font-semibold text-white disabled:opacity-50">{categoryBusy ? 'Saving…' : 'Add category'}</button>
+                </form>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {categories.map((category) => (
+                    <article key={category.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white p-4">
+                      <div><p className="font-semibold text-gray-900">{category.name}</p><p className="text-xs text-gray-500">Category #{category.id}</p></div>
+                      <button type="button" onClick={() => handleDeleteCategory(category)} className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button>
+                    </article>
+                  ))}
+                </div>
+                {!categories.length && <p className="rounded-xl bg-gray-50 p-6 text-center text-sm text-gray-500">No categories found. Add the first category above.</p>}
+              </section>
             )}
 
             {activeTab === 'users' && (
@@ -366,6 +439,7 @@ const AdminDashboard = () => {
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Customer</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Total</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Update</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -375,6 +449,7 @@ const AdminDashboard = () => {
                           <td className="px-6 py-4 text-sm text-gray-900">{order.user?.name}</td>
                           <td className="px-6 py-4 text-sm font-bold text-gray-900">₹{Number(order.total_amount || order.total || 0).toLocaleString('en-IN')}</td>
                           <td className="px-6 py-4"><span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-bold text-gray-600 uppercase">{order.status}</span></td>
+                          <td className="px-6 py-4"><select aria-label={'Update order ' + order.id + ' status'} value={order.status} onChange={(event) => handleOrderStatus(order.id, event.target.value)} className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs"><option value="pending">Pending</option><option value="processing">Processing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></td>
                         </tr>
                       ))}
                     </tbody>
