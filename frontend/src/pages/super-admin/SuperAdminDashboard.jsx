@@ -215,7 +215,6 @@ const SuperAdminDashboard = () => {
       name: admin.name,
       email: admin.email,
       password: '',
-      status: admin.status || 'active',
       role: admin.roles?.[0]?.name || 'admin',
       status: admin.status || 'active'
     });
