@@ -101,6 +101,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/admins', [SuperAdminController::class, 'getAllAdmins']);
         Route::get('/users', [SuperAdminController::class, 'getAllUsers']);
         Route::get('/sellers', [SuperAdminController::class, 'getAllSellers']);
+        Route::get('/orders', [SuperAdminController::class, 'getAllOrders']);
+        Route::get('/products', [SuperAdminController::class, 'getAllProducts']);
 
         // User Management
         Route::post('/admins', [SuperAdminController::class, 'createAdmin']);
