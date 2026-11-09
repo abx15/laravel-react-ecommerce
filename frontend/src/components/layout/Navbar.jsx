@@ -109,7 +109,7 @@ const Navbar = () => {
                                 <div>
                                     <h4 className="font-bold mb-2">Your Account</h4>
                                     <Link to="/profile" className="block text-gray-600 hover:text-[#E47911] hover:underline text-xs mb-1">Account</Link>
-                                    <Link to="/orders" className="block text-gray-600 hover:text-[#E47911] hover:underline text-xs mb-1">Orders</Link>
+                                    <Link to="/user/orders" className="block text-gray-600 hover:text-[#E47911] hover:underline text-xs mb-1">Orders</Link>
                                     {user?.roles?.some(r => ['admin', 'seller'].includes(r.name)) && (
                                         <Link to="/dashboard" className="block text-gray-600 hover:text-[#E47911] hover:underline text-xs mb-1">Dashboard</Link>
                                     )}
@@ -119,7 +119,7 @@ const Navbar = () => {
                     </div>
 
                     {/* Returns & Orders */}
-                    <Link to="/orders" className="hidden lg:flex flex-col p-2 hover:border hover:border-white rounded cursor-pointer">
+                    <Link to="/user/orders" className="hidden lg:flex flex-col p-2 hover:border hover:border-white rounded cursor-pointer">
                         <span className="text-xs text-gray-300 font-normal">Returns</span>
                         <span className="font-bold leading-none">& Orders</span>
                     </Link>
