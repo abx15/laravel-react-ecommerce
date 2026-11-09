@@ -80,7 +80,7 @@ const BecomeSeller = () => {
         data.append('bank_details[bank_name]', formData.bank_name);
 
         try {
-            const response = await api.post('/seller/register', data);
+            const response = await api.post('/sellers', data);
 
             if (response.status === 201) {
                 alert('Success! Your seller request is pending approval.');
