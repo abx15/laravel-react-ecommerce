@@ -16,6 +16,7 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [addresses, setAddresses] = useState([]);
   const [activeTab, setActiveTab] = useState('orders');
 
   useEffect(() => {
@@ -31,12 +32,14 @@ const UserDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [dashboardRes, ordersRes] = await Promise.all([
+      const [dashboardRes, ordersRes, profileRes] = await Promise.all([
         api.get('/dashboard'), // Assuming this exists or falls back
-        api.get('/user/orders')
+        api.get('/user/orders'),
+        api.get('/user/profile')
       ]);
       setData(dashboardRes.data.data || dashboardRes.data);
       setOrders(ordersRes.data.data?.data || ordersRes.data.data || []);
+      setAddresses(profileRes.data?.data?.addresses || []);
     } catch (error) {
       console.error("User Data Error", error);
     } finally {
@@ -81,7 +84,26 @@ const UserDashboard = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      {activeTab === 'addresses' && (
+        <section className="max-w-7xl mx-auto px-8 pt-8">
+          <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900">Saved delivery addresses</h2>
+            <p className="mt-1 text-sm text-gray-500">Addresses you have used for previous orders.</p>
+            {addresses.length ? (
+              <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {addresses.map(address => (
+                  <article key={address.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <p className="font-semibold text-gray-900">{address.address_line_1}</p>
+                    {address.address_line_2 && <p className="mt-1 text-sm text-gray-600">{address.address_line_2}</p>}
+                    <p className="mt-1 text-sm text-gray-600">{[address.city, address.state, address.zip_code, address.country].filter(Boolean).join(', ')}</p>
+                  </article>
+                ))}
+              </div>
+            ) : <p className="mt-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">No saved addresses yet. Your address will be saved during checkout.</p>}
+          </div>
+        </section>
+      )}
+      <div className={activeTab === 'addresses' ? 'hidden' : 'max-w-7xl mx-auto p-8 space-y-8'}>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
