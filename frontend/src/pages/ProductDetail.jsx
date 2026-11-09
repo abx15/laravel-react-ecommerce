@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../services/api';
+import api, { assetUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const ProductDetail = () => {
@@ -40,7 +40,7 @@ const ProductDetail = () => {
                 <div className="md:w-1/2 p-4 bg-gray-100 flex items-center justify-center">
                     {product.images && product.images.length > 0 ? (
                         <img
-                            src={`http://localhost:8000${product.images[0].image_path}`}
+                            src={assetUrl(product.images[0].image_path)}
                             alt={product.name}
                             className="max-h-96 w-full object-contain"
                         />
@@ -59,7 +59,7 @@ const ProductDetail = () => {
                             type="number"
                             min="1"
                             value={quantity}
-                            onChange={(e) => setQuantity(parseInt(e.target.value))}
+                            onChange={(e) => setQuantity(Math.max(1, Math.min(Number(product.stock) || 1, Number.parseInt(e.target.value, 10) || 1)))}
                             className="w-20 border rounded p-2 text-center"
                         />
                     </div>
