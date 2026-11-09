@@ -8,7 +8,6 @@ use App\Models\Product;
 use App\Models\Seller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 
 class SuperAdminController extends Controller
 {
@@ -188,50 +187,27 @@ class SuperAdminController extends Controller
      */
     public function createAdmin(Request $request)
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
-                'password' => 'required|string|min:8'
-            ]);
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:12',
+        ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $admin = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
+        $admin = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
                 'user_type' => 'admin', // Using user_type
                 'status' => 'active'
             ]);
 
-            // Assign Spatie role if available
-            if (method_exists($admin, 'assignRole')) {
-                try {
-                    $admin->assignRole('admin');
-                } catch (\Exception $e) {
-                    // Ignore if role doesn't exist
-                }
-            }
+            $admin->assignRole('admin');
 
             return response()->json([
                 'success' => true,
                 'message' => 'Admin created successfully',
                 'data' => $admin
             ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error creating admin',
-                'error' => $e->getMessage()
-            ], 500);
-        }
     }
 
 
@@ -267,9 +243,12 @@ class SuperAdminController extends Controller
     /**
      * Delete an administrator account.
      */
-    public function deleteAdmin($id)
+    public function deleteAdmin(Request $request, $id)
     {
         $admin = User::where('user_type', 'admin')->findOrFail($id);
+        if ((int) $request->user()->id === (int) $admin->id) {
+            return response()->json(['success' => false, 'message' => 'You cannot delete your own active administrator account.'], 422);
+        }
         $admin->delete();
 
         return response()->json([
@@ -284,30 +263,21 @@ class SuperAdminController extends Controller
     public function updateUserRole(Request $request, $id)
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'role' => 'required|string|in:user,admin,seller,super_admin'
+            $validated = $request->validate([
+                'role' => 'required|string|in:user,seller,admin',
             ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
             $user = User::findOrFail($id);
-            $user->user_type = $request->role; // Update user_type
-            $user->save();
-
-            // Sync Spatie roles if available
-            if (method_exists($user, 'syncRoles')) {
-                try {
-                    $user->syncRoles([$request->role]);
-                } catch (\Exception $e) {
-                    // Ignore
-                }
+            if ($user->isSuperAdmin()) {
+                return response()->json(['success' => false, 'message' => 'Super Admin roles cannot be changed through user management.'], 403);
             }
+            if ((int) $request->user()->id === (int) $user->id) {
+                return response()->json(['success' => false, 'message' => 'You cannot change your own role.'], 422);
+            }
+
+            $user->user_type = $validated['role'];
+            $user->save();
+            $user->syncRoles($validated['role'] === 'seller' ? ['user', 'seller'] : [$validated['role']]);
 
             return response()->json([
                 'success' => true,
@@ -332,11 +302,15 @@ class SuperAdminController extends Controller
             $user = User::findOrFail($id);
 
             // Prevent deleting super admin
-            if ($user->user_type === 'super_admin' || $user->user_type === 'superadmin') {
+            if ($user->isSuperAdmin()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cannot delete Super Admin account'
                 ], 403);
+            }
+
+            if ((int) request()->user()->id === (int) $user->id) {
+                return response()->json(['success' => false, 'message' => 'You cannot delete your own account.'], 422);
             }
 
             $user->delete();
