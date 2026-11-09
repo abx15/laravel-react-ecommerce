@@ -48,11 +48,11 @@ class RoleSeeder extends Seeder
         $rolePermissions = [
             'user' => [
                 'catalog.read', 'cart.manage-own', 'orders.manage-own',
-                'profile.manage-own', 'seller.apply',
+                'profile.manage-own', 'wishlist.manage-own', 'seller.apply',
             ],
             'seller' => [
                 'catalog.read', 'cart.manage-own', 'orders.manage-own',
-                'profile.manage-own', 'seller.apply', 'seller.products.manage-own',
+                'profile.manage-own', 'wishlist.manage-own', 'seller.apply', 'seller.products.manage-own',
                 'seller.orders.read-own', 'seller.analytics.read-own',
             ],
             'admin' => [
