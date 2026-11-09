@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import api from '../services/api';
+import api, { assetUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -126,7 +126,7 @@ const Cart = () => {
                     <div key={item.id} className="flex justify-between items-center border-b pb-4">
                         <div className="flex items-center space-x-4">
                             {item.product.images && item.product.images.length > 0 && (
-                                <img src={`http://localhost:8000${item.product.images[0].image_path}`} className="w-16 h-16 object-cover rounded" />
+                                <img src={assetUrl(item.product.images[0].image_path)} className="w-16 h-16 object-cover rounded" />
                             )}
                             <div>
                                 <h3 className="font-semibold">{item.product.name}</h3>
