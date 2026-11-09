@@ -273,35 +273,35 @@ class SuperAdminController extends Controller
      */
     public function updateUserRole(Request $request, $id)
     {
-        try {
-            $validated = $request->validate([
-                'role' => 'required|string|in:user,seller,admin',
-            ]);
+        $validated = $request->validate([
+            'role' => 'required|string|in:user,seller,admin',
+        ]);
 
-            $user = User::findOrFail($id);
-            if ($user->isSuperAdmin()) {
-                return response()->json(['success' => false, 'message' => 'Super Admin roles cannot be changed through user management.'], 403);
-            }
-            if ((int) $request->user()->id === (int) $user->id) {
-                return response()->json(['success' => false, 'message' => 'You cannot change your own role.'], 422);
-            }
+        $user = User::findOrFail($id);
 
-            $user->user_type = $validated['role'];
-            $user->save();
-            $user->syncRoles($validated['role'] === 'seller' ? ['user', 'seller'] : [$validated['role']]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'User role updated successfully',
-                'data' => $user
-            ], 200);
-        } catch (\Exception $e) {
+        if ($user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error updating user role',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Super Admin roles cannot be changed through user management.',
+            ], 403);
         }
+
+        if ((int) $request->user()->id === (int) $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot change your own role.',
+            ], 422);
+        }
+
+        $user->user_type = $validated['role'];
+        $user->save();
+        $user->syncRoles($validated['role'] === 'seller' ? ['user', 'seller'] : [$validated['role']]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User role updated successfully',
+            'data' => $user->fresh()->load('roles'),
+        ]);
     }
 
     /**
