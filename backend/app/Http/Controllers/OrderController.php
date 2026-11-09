@@ -160,12 +160,22 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Order $order)
     {
+        $this->authorize('access-admin-dashboard', $request->user());
+
         $validated = $request->validate([
             'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
         ]);
 
+        if ($order->payment_status !== 'paid' && in_array($validated['status'], ['processing', 'shipped', 'delivered'], true)) {
+            return $this->error('An order must be paid before it can be processed or fulfilled.', 422);
+        }
+
+        if ($order->status === 'delivered' && $validated['status'] !== 'delivered') {
+            return $this->error('A delivered order cannot be moved to another status.', 422);
+        }
+
         $order->update(['status' => $validated['status']]);
 
-        return $this->success($order, 'Order status updated');
+        return $this->success($order->load(['user', 'items.product', 'payment']), 'Order status updated');
     }
 }
