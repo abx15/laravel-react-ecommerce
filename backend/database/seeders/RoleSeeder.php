@@ -69,6 +69,9 @@ class RoleSeeder extends Seeder
             $role->syncPermissions($permissionModels->only($grants)->values());
         }
 
+        User::whereIn('email', ['admin@example.com', 'superadmin@example.com', 'test@example.com'])
+            ->update(['status' => 'inactive', 'is_blocked' => true]);
+
         User::query()->select(['id', 'user_type'])->chunkById(200, function ($users) {
             foreach ($users as $user) {
                 $roles = match ($user->user_type) {
