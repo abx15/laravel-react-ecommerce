@@ -179,6 +179,7 @@ const SuperAdminDashboard = () => {
         name: formData.name,
         email: formData.email,
         ...(formData.password ? { password: formData.password } : {}),
+        status: formData.status,
       });
       setShowEditAdminModal(false);
       setSelectedAdmin(null);
@@ -214,6 +215,7 @@ const SuperAdminDashboard = () => {
       name: admin.name,
       email: admin.email,
       password: '',
+      status: admin.status || 'active',
       role: admin.roles?.[0]?.name || 'admin',
       status: admin.status || 'active'
     });
