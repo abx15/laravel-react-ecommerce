@@ -201,16 +201,10 @@ const SuperAdminDashboard = () => {
 
   const handleVerifySeller = async (sellerId) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`/api/super-admin/sellers/${sellerId}/approve`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
-      fetchDashboardData();
+      await api.patch('/super-admin/sellers/' + sellerId + '/approve');
+      await fetchDashboardData();
     } catch (error) {
-      console.error('Error verifying seller:', error);
+      window.alert(error.response?.data?.message || 'Unable to approve seller.');
     }
   };
 
@@ -559,8 +553,8 @@ const SuperAdminDashboard = () => {
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
                             <td className="px-6 py-4 text-sm text-gray-800 font-medium">{user.orders_count || 0}</td>
-                            <td className="px-6 py-4 text-sm text-gray-800 font-medium">${user.total_spent || 0}</td>
-                            <td className="px-6 py-4 text-xs text-gray-400">{new Date(user.created_at).toLocaleDateString()}</td>
+                            <td className="px-6 py-4 text-sm text-gray-800 font-medium">₹${Number(user.total_spent || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-6 py-4 text-xs text-gray-400">{new Date(user.created_at).toLocaleDateString('en-IN')}</td>
                           </tr>
                         ))}
 
