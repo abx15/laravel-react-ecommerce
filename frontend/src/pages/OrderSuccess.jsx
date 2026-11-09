@@ -7,16 +7,13 @@ const OrderSuccess = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [order, setOrder] = useState(location.state?.order || null);
-    const [loading, setLoading] = useState(!location.state?.order);
+    const [loading, setLoading] = useState(() => !location.state?.order && Boolean(sessionStorage.getItem('lastOrderId')));
     const [error, setError] = useState('');
 
     useEffect(() => {
         if (order) return;
         const orderId = sessionStorage.getItem('lastOrderId');
-        if (!orderId) {
-            setLoading(false);
-            return;
-        }
+        if (!orderId) return;
 
         let active = true;
         api.get('/orders/' + orderId)
