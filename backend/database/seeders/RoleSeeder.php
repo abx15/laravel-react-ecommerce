@@ -19,6 +19,7 @@ class RoleSeeder extends Seeder
             'cart.manage-own',
             'orders.manage-own',
             'profile.manage-own',
+            'wishlist.manage-own',
             'seller.apply',
             'seller.products.manage-own',
             'seller.orders.read-own',
