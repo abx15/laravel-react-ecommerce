@@ -8,13 +8,14 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Razorpay\Api\Api;
 
 class OrderController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, AuthorizesRequests;
 
     public function index(Request $request)
     {
