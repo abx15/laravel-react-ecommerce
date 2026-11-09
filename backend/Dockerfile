@@ -17,6 +17,8 @@ RUN apk add --no-cache \
     freetype-dev \
     libjpeg-turbo-dev \
     jpeg-dev \
+    postgresql-dev \
+    icu-dev \
     libpng-dev \
     nginx \
     supervisor
