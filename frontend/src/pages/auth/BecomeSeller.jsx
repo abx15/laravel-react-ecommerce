@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -12,6 +12,10 @@ import { useAuth } from '../../context/AuthContext';
 const BecomeSeller = () => {
     const navigate = useNavigate();
     const { user, loading: authLoading } = useAuth();
+
+    useEffect(() => {
+        if (!authLoading && !user) navigate('/login', { replace: true });
+    }, [authLoading, user, navigate]);
 
     const [formData, setFormData] = useState({
         shop_name: '',
@@ -29,6 +33,9 @@ const BecomeSeller = () => {
     const [idProof, setIdProof] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    if (authLoading) return <div className="p-10 text-center text-gray-500">Checking your account…</div>;
+    if (!user) return null;
 
     const handleChange = (e) => {
         setFormData({
