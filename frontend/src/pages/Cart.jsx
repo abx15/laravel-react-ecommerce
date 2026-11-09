@@ -20,6 +20,7 @@ const Cart = () => {
         try {
             const response = await api.get('/cart');
             setCart(response.data?.data || null);
+            window.dispatchEvent(new Event('cart:updated'));
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Unable to load your cart.');
         } finally {
@@ -56,6 +57,7 @@ const Cart = () => {
         setError('');
         try {
             await api.delete('/cart/' + itemId);
+            window.dispatchEvent(new Event('cart:updated'));
             await fetchCart();
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Could not remove this item.');
