@@ -38,9 +38,7 @@ class SellerController extends Controller
 
         $user = $request->user();
         $user->update(['user_type' => 'seller']);
-        if (!$user->hasRole('seller')) {
-            $user->assignRole('seller');
-        }
+        $user->syncRoles(['user', 'seller']);
 
         $seller = Seller::create([
             'user_id' => $user->id,
