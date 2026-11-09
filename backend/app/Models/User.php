@@ -84,24 +84,26 @@ class User extends Authenticatable
     }
 
     // Role helper methods
-    public function isUser()
+    public function isUser(): bool
     {
-        return $this->user_type === 'user';
+        return $this->user_type === 'user' || $this->hasRole('user');
     }
 
-    public function isSeller()
+    public function isSeller(): bool
     {
-        return $this->user_type === 'seller';
+        return $this->user_type === 'seller' || $this->hasRole('seller');
     }
 
-    public function isAdmin()
+    public function isAdmin(): bool
     {
-        return $this->user_type === 'admin';
+        return $this->user_type === 'admin' || $this->hasRole('admin');
     }
 
-    public function isSuperAdmin()
+    public function isSuperAdmin(): bool
     {
-        return $this->user_type === 'super_admin';
+        return in_array($this->user_type, ['super_admin', 'superadmin'], true)
+            || $this->hasRole('super_admin')
+            || $this->hasRole('superadmin');
     }
 
     public function hasSellerAccess()
