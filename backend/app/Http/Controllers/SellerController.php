@@ -72,26 +72,30 @@ class SellerController extends Controller
         return $this->success($seller->load('user'));
     }
 
-    public function update(Request $request, Seller $seller)
+    public function update(Request $request)
     {
-        $this->authorize('update', $seller);
+        $seller = $request->user()->sellerProfile;
+
+        if (!$seller) {
+            return $this->error('Seller profile not found.', 404);
+        }
 
         $validated = $request->validate([
-            'shop_name' => 'sometimes|string|max:255',
-            'shop_address' => 'sometimes|string',
-            'city' => 'sometimes|string',
-            'pincode' => 'sometimes|string',
-            'gst_number' => 'sometimes|nullable|string',
+            'shop_name' => 'sometimes|required|string|max:255',
+            'shop_address' => 'sometimes|required|string|max:1000',
+            'city' => 'sometimes|required|string|max:120',
+            'pincode' => 'sometimes|required|string|max:20',
+            'gst_number' => 'sometimes|nullable|string|max:30',
             'bank_details' => 'sometimes|array',
-            'bank_details.account_holder_name' => 'sometimes|string',
-            'bank_details.account_number' => 'sometimes|string',
-            'bank_details.ifsc_code' => 'sometimes|string',
-            'bank_details.bank_name' => 'sometimes|string',
+            'bank_details.account_holder_name' => 'sometimes|required|string|max:255',
+            'bank_details.account_number' => 'sometimes|required|string|max:34',
+            'bank_details.ifsc_code' => 'sometimes|required|string|max:20',
+            'bank_details.bank_name' => 'sometimes|required|string|max:255',
         ]);
 
         $seller->update($validated);
 
-        return $this->success($seller, 'Seller profile updated successfully');
+        return $this->success($seller->fresh(), 'Seller profile updated successfully');
     }
 
     public function verify(Request $request, Seller $seller)
