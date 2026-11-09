@@ -8,6 +8,7 @@ WORKDIR /var/www
 RUN apk add --no-cache \
     git \
     curl \
+    ca-certificates \
     libpng-dev \
     oniguruma-dev \
     libxml2-dev \
