@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 import {
   FiMenu, FiX, FiHome, FiUsers, FiShoppingBag, FiSettings,
   FiLogOut, FiChevronLeft, FiChevronRight, FiGrid, FiBox,
@@ -10,14 +11,7 @@ import {
 const DashboardLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [user] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      return {};
-    }
-  });
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -37,16 +31,12 @@ const DashboardLayout = ({ children }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
+  const handleLogout = () => logout();
 
   const getSidebarItems = () => {
     if (!user) return [];
 
-    const userRole = user.roles?.[0]?.name || 'user';
+    const userRole = (user.roles?.[0]?.name || user.user_type || 'user').toLowerCase();
 
     const items = {
       super_admin: [
@@ -61,8 +51,10 @@ const DashboardLayout = ({ children }) => {
       admin: [
         { name: 'Dashboard', href: '/admin', icon: <FiGrid /> },
         { name: 'Sellers', href: '/admin/sellers', icon: <FiUserCheck /> },
+        { name: 'Customers', href: '/admin/users', icon: <FiUsers /> },
         { name: 'Orders', href: '/admin/orders', icon: <FiShoppingBag /> },
         { name: 'Products', href: '/admin/products', icon: <FiBox /> },
+        { name: 'Categories', href: '/admin/categories', icon: <FiGrid /> },
       ],
       seller: [
         { name: 'Dashboard', href: '/seller/dashboard', icon: <FiGrid /> },
