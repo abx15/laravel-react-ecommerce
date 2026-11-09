@@ -19,9 +19,12 @@ class SellerDashboardController extends Controller
             'my_orders' => Order::whereHas('orderItems.product', function($query) use ($seller) {
                 $query->where('seller_id', $seller->id);
             })->count(),
-            'my_revenue' => Order::whereHas('orderItems.product', function($query) use ($seller) {
-                $query->where('seller_id', $seller->id);
-            })->where('status', 'delivered')->sum('total_amount'),
+            'my_revenue' => DB::table('order_items')
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->join('products', 'products.id', '=', 'order_items.product_id')
+                ->where('products.seller_id', $seller->id)
+                ->where('orders.payment_status', 'paid')
+                ->sum(DB::raw('order_items.price * order_items.quantity')),
         ];
 
         // Order Status Breakdown
@@ -37,7 +40,11 @@ class SellerDashboardController extends Controller
                 $query->where('seller_id', $seller->id);
             })
             ->where('created_at', '>=', Carbon::now()->subDays(30))
-            ->selectRaw('DATE(created_at) as date, COUNT(*) as sales, SUM(total_amount) as revenue')
+            ->selectRaw('DATE(orders.created_at) as date, COUNT(DISTINCT orders.id) as sales, SUM(order_items.price * order_items.quantity) as revenue')
+            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+            ->join('products', 'products.id', '=', 'order_items.product_id')
+            ->where('products.seller_id', $seller->id)
+            ->where('orders.payment_status', 'paid')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
