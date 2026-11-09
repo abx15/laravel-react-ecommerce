@@ -24,6 +24,7 @@ class User extends Authenticatable
         'mobile',
         'password',
         'user_type',
+        'status',
         'is_verified',
         'is_blocked',
         'is_seller_verified',
