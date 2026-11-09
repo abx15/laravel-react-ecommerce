@@ -62,7 +62,7 @@ const ProductCard = ({ product }) => {
                 <div className="mt-auto">
                     <div className="flex items-baseline gap-2">
                         <span className="text-xl font-bold text-gray-900">
-                            ${product.price}
+                            ₹{product.price}
                         </span>
                         {product.original_price && (
                             <span className="text-xs text-gray-500 line-through">
