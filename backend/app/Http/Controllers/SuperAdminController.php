@@ -245,6 +245,7 @@ class SuperAdminController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|max:255|unique:users,email,' . $admin->id,
             'password' => 'sometimes|nullable|string|min:8',
+            'status' => 'sometimes|required|in:active,inactive',
         ]);
 
         if (!empty($validated['password'])) {
