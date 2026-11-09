@@ -13,7 +13,7 @@ const Navbar = () => {
     const [cartCount, setCartCount] = useState(0);
 
     useEffect(() => {
-        if (!user) { setCartCount(0); return undefined; }
+        if (!user) return undefined;
         const loadCartCount = async () => {
             try {
                 const response = await api.get('/cart');
@@ -128,7 +128,7 @@ const Navbar = () => {
                     <Link to="/cart" className="flex items-end p-2 hover:border hover:border-white rounded cursor-pointer relative">
                         <div className="relative">
                             <ShoppingCart className="w-8 h-8" />
-                            <span className="absolute -top-1 left-1/2 -translate-x-1/2 text-[#F08804] font-bold text-base">{cartCount > 99 ? "99+" : cartCount}</span>
+                            <span className="absolute -top-1 left-1/2 -translate-x-1/2 text-[#F08804] font-bold text-base">{user ? (cartCount > 99 ? "99+" : cartCount) : 0}</span>
                         </div>
                         <span className="font-bold hidden lg:inline mb-1">Cart</span>
                     </Link>
