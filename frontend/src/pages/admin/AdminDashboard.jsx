@@ -9,7 +9,7 @@ import {
   AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import api from '../../services/api';
+import api, { assetUrl } from '../../services/api';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -32,7 +32,7 @@ const AdminDashboard = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', price: '', stock: '', category_id: '', description: '', image: null
+    name: '', price: '', stock: '', category_id: '', description: '', images: []
   });
 
   // Sync Tab with URL
@@ -69,9 +69,9 @@ const AdminDashboard = () => {
       ]);
 
       if (dashboardRes.status === 'fulfilled') setStats(dashboardRes.value.data.data || {});
-      if (productsRes.status === 'fulfilled') setProducts(productsRes.value.data.data || []);
-      if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value.data.data || []);
-      if (sellersRes.status === 'fulfilled') setSellers(sellersRes.value.data.data || []);
+      if (productsRes.status === 'fulfilled') setProducts(productsRes.value.data.data?.data || productsRes.value.data.data || []);
+      if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value.data.data?.data || ordersRes.value.data.data || []);
+      if (sellersRes.status === 'fulfilled') setSellers(sellersRes.value.data.data?.data || sellersRes.value.data.data || []);
       if (requestsRes.status === 'fulfilled') setSellerRequests(requestsRes.value.data.data || []);
       if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data.data.data || []); // Paginated response usually has .data
 
@@ -91,7 +91,10 @@ const AdminDashboard = () => {
   const handleAddProduct = async (e) => {
     e.preventDefault();
     const data = new FormData();
-    Object.keys(formData).forEach(key => data.append(key, formData[key]));
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key !== 'images' && value !== null && value !== undefined) data.append(key, value);
+    });
+    Array.from(formData.images || []).forEach((image, index) => data.append('images[' + index + ']', image));
 
     try {
       await api.post('/admin/products', data, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -191,7 +194,7 @@ const AdminDashboard = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Revenue" value={`$${stats?.stats?.revenue || 0}`} icon={<FiDollarSign />} gradient="bg-gradient-to-br from-blue-500 to-indigo-600" />
+          <StatCard title="Revenue" value={`$${Number(stats?.stats?.revenue || 0).toLocaleString('en-IN')}`} icon={<FiDollarSign />} gradient="bg-gradient-to-br from-blue-500 to-indigo-600" />
           <StatCard title="Orders" value={stats?.stats?.total_orders || 0} icon={<FiShoppingCart />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" />
           <StatCard title="Users" value={stats?.stats?.total_users || 0} icon={<FiUsers />} gradient="bg-gradient-to-br from-violet-500 to-purple-600" />
           <StatCard title="Sellers" value={stats?.stats?.total_sellers || 0} icon={<FiUsers />} gradient="bg-gradient-to-br from-orange-400 to-pink-500" />
@@ -255,7 +258,7 @@ const AdminDashboard = () => {
                         <tr key={product.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <img src={product.image || 'https://via.placeholder.com/40'} className="w-10 h-10 rounded-lg bg-gray-200 object-cover" alt="" />
+                              <img src={assetUrl(product.images?.[0]?.image_path)} className="w-10 h-10 rounded-lg bg-gray-200 object-cover" alt="" />
                               <div>
                                 <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
                                 <p className="text-xs text-gray-500">{product.category?.name}</p>
@@ -263,7 +266,7 @@ const AdminDashboard = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">{product.seller?.shop_name || 'Admin'}</td>
-                          <td className="px-6 py-4 text-sm font-bold text-gray-900">${product.price}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-900">${Number(product.price || 0).toLocaleString('en-IN')}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
                               <button onClick={() => initiateEdit(product)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><FiEdit2 /></button>
@@ -343,7 +346,7 @@ const AdminDashboard = () => {
                         <tr key={order.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 text-sm font-bold text-blue-600">#{order.id}</td>
                           <td className="px-6 py-4 text-sm text-gray-900">{order.user?.name}</td>
-                          <td className="px-6 py-4 text-sm font-bold text-gray-900">${order.total_amount || order.total}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-900">₹{Number(order.total_amount || order.total || 0).toLocaleString('en-IN')}</td>
                           <td className="px-6 py-4"><span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-bold text-gray-600 uppercase">{order.status}</span></td>
                         </tr>
                       ))}
