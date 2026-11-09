@@ -8,7 +8,7 @@ import 'swiper/css/effect-cards';
 import api from '../../services/api';
 import './UserDashboard.css';
 
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './UserDashboard.css';
 
 const UserDashboard = () => {
@@ -32,7 +32,7 @@ const UserDashboard = () => {
   const fetchData = async () => {
     try {
       const [dashboardRes, ordersRes] = await Promise.all([
-        api.get('/user/dashboard'), // Assuming this exists or falls back
+        api.get('/dashboard'), // Assuming this exists or falls back
         api.get('/user/orders')
       ]);
       setData(dashboardRes.data.data || dashboardRes.data);
@@ -77,7 +77,7 @@ const UserDashboard = () => {
           <p className="text-xs text-gray-500">Welcome back, {user.name}</p>
         </div>
         <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-md">
-          {user.name[0]}
+          {user.name?.[0] || 'U'}
         </div>
       </div>
 
@@ -98,7 +98,7 @@ const UserDashboard = () => {
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-800">Recent Orders</h2>
-                <button className="text-indigo-600 text-sm font-semibold hover:underline">View All</button>
+                <Link to="/user/orders" className="text-indigo-600 text-sm font-semibold hover:underline">View All</Link>
               </div>
 
               <div className="space-y-4">
@@ -114,12 +114,12 @@ const UserDashboard = () => {
                       </div>
                       <div>
                         <p className="font-bold text-gray-900">Order #{order.id}</p>
-                        <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString()} • {order.order_items?.length || 0} items</p>
+                        <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString()} • {order.items?.length || order.order_items?.length || 0} items</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-gray-900">₹{Number(order.total_amount || 0).toLocaleString("en-IN")}</p>
-                      <span className={`text-xs px-2 py-1 rounded-full font-bold ${order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                      <span className={`text-xs px-2 py-1 rounded-full font-bold ${order.status === 'delivered' ? 'bg-green-100 text-green-700' :
                         order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'
                         }`}>
                         {order.status}
