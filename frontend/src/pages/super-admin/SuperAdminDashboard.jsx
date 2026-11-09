@@ -465,6 +465,11 @@ const SuperAdminDashboard = () => {
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                         />
+                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} aria-label="Filter admins by status" className="ml-2 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700">
+                          <option value="all">All statuses</option>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
                       </div>
 
                       {activeTab === 'admins' && (
