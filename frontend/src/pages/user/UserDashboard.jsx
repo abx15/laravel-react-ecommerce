@@ -155,12 +155,12 @@ const UserDashboard = () => {
                   </div>
                   <span className="text-gray-400">→</span>
                 </Link>
-                <button className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                <Link to="/user/addresses" className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex items-center gap-3 text-gray-700 font-medium">
                     <FiMapPin /> Addresses
                   </div>
                   <span className="text-gray-400">→</span>
-                </button>
+                </Link>
               </div>
             </div>
           </div>
