@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 
 const Register = () => {
-    const navigate = useNavigate();
     const { register } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
@@ -38,7 +37,6 @@ const Register = () => {
 
         try {
             await register(formData);
-            navigate('/');
         } catch (error) {
             console.error('Registration error:', error);
             // Handle specific errors based on API response structure if accessible
