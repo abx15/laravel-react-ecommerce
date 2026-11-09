@@ -52,6 +52,10 @@ class PaymentController extends Controller
 
             $paymentDetails = $api->payment->fetch($validated['razorpay_payment_id']);
 
+            if ((string) $paymentDetails->status !== 'captured') {
+                return $this->error('Payment has not been captured yet. Please wait for confirmation.', 409);
+            }
+
             if (
                 (string) $paymentDetails->order_id !== $order->razorpay_order_id
                 || (int) $paymentDetails->amount !== (int) round((float) $order->total_amount * 100)
