@@ -39,6 +39,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     opcache
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY docker/entrypoint.sh /usr/local/bin/openshop-entrypoint
+RUN chmod +x /usr/local/bin/openshop-entrypoint
 
 COPY --chown=www-data:www-data . /var/www
 
@@ -117,4 +119,5 @@ RUN mkdir -p \
 
 EXPOSE 80
 
+ENTRYPOINT ["/usr/local/bin/openshop-entrypoint"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
