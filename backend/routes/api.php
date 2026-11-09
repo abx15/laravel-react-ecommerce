@@ -14,6 +14,7 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\UserDashboardController;
+use App\Http\Controllers\AddressController;
 
 // Public Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -28,6 +29,12 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Customer-owned saved addresses (also usable by sellers who shop as customers).
+    Route::get('/addresses', [AddressController::class, 'index']);
+    Route::post('/addresses', [AddressController::class, 'store']);
+    Route::put('/addresses/{address}', [AddressController::class, 'update']);
+    Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
     Route::delete('/product-images/{id}', [ProductController::class, 'deleteImage']);
 
     // Cart Routes (require authentication)
