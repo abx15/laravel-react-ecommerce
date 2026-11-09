@@ -95,6 +95,10 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
+        if ($product->seller_id !== $request->user()->id) {
+            return $this->error('You can only update your own products.', 403);
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
@@ -151,7 +155,10 @@ class ProductController extends Controller
             return $this->error('Image not found', 404);
         }
 
-        if ($request->user()->hasRole(['seller']) && $image->product->seller_id !== $request->user()->id) {
+        $user = $request->user();
+        $isAdmin = $user->hasRole(['admin', 'super_admin']);
+        $ownsProduct = $user->user_type === 'seller' && $image->product->seller_id === $user->id;
+        if (!$isAdmin && !$ownsProduct) {
             return $this->error('Unauthorized', 403);
         }
 
@@ -165,8 +172,12 @@ class ProductController extends Controller
         return $this->success([], 'Image deleted successfully');
     }
 
-    public function destroy(Product $product)
+    public function destroy(Request $request, Product $product)
     {
+        if ($product->seller_id !== $request->user()->id) {
+            return $this->error('You can only delete your own products.', 403);
+        }
+
         $product->delete();
 
         return $this->success([], 'Product deleted successfully');
