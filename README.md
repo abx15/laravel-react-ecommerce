@@ -1,151 +1,131 @@
-# 🛒 OpenShop - Professional E-Commerce Platform
+# OpenShop — Laravel + React E-Commerce
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![CI](https://github.com/abx15/laravel-react-ecommerce/actions/workflows/ci.yml/badge.svg)
-![Laravel](https://img.shields.io/badge/backend-Laravel_11-red.svg)
-![React](https://img.shields.io/badge/frontend-React_18-cyan.svg)
-![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)
+OpenShop is a multi-role e-commerce application built with a Laravel 11 API and a React/Vite single-page frontend.
 
-A production-grade, fully open-source E-Commerce platform built with **Laravel 11 (API)** and **React 18**. Designed for scalability, security, and exceptional developer experience.
+## Stack
 
-## 🚀 Key Features
+- **Backend:** PHP 8.2+, Laravel 11, Sanctum, Spatie Laravel Permission
+- **Frontend:** React, Vite, React Router, Tailwind CSS
+- **Database:** MySQL 8 (SQLite can be used for local Laravel development)
+- **Payments:** Razorpay (configure test/live credentials in the backend environment)
+- **Deployment:** Vercel for the static frontend; Render or another PHP-capable host for the Laravel API
 
-### 🎯 Core Functionality
+## Repository layout
 
-- **Multi-role Authentication**: Users, Admins, and Super Admins
-- **Product Catalog**: Complete CRUD with image uploads and categories
-- **Shopping Cart**: Persistent cart with real-time updates
-- **Order Management**: Full order lifecycle with status tracking
-- **Payment Integration**: Secure Razorpay payments with server-side verification
-- **Responsive Design**: Mobile-first approach with Tailwind CSS
-
-### Backend (Laravel API)
-
-- **Authentication**: Laravel Sanctum token-based authentication
-- **RBAC**: Role-Based Access Control via Spatie Permissions
-- **API Standards**: RESTful design with proper HTTP codes
-- **Security**: Input validation, rate limiting, and CORS protection
-
-### Frontend (React)
-
-- **Modern Stack**: React 18, Vite, Tailwind CSS
-- **State Management**: Context API with custom hooks
-- **Admin Dashboard**: Complete admin panel for store management
-- **SPA Architecture**: Seamless client-side routing
-
-## 🛠 Tech Stack
-
-| Component | Technology |
-|Info|Details|
-| :--- | :--- |
-| **Backend** | PHP 8.2+, Laravel 11, MySQL 8 |
-| **Frontend** | React 18, Vite, Tailwind CSS, Headless UI |
-| **Auth** | Laravel Sanctum, Spatie Permission |
-| **DevOps** | Docker, GitHub Actions, Vercel |
-
-## 📂 Project Structure
-
-```bash
-ecomer/
-├── backend/                 # Laravel API Backend
-├── frontend/                # React Frontend
-├── .github/                 # CI/CD & Community Files
-├── docker/                  # Docker Configs
-├── vercel.json              # Vercel Deployment Config
-├── Dockerfile               # Production Frontend Build
-└── README.md                # Documentation
+```text
+backend/       Laravel API, migrations, seeders and tests
+frontend/      React/Vite application
+docker/        Reverse-proxy and container configuration
+.github/       CI workflows
+Dockerfile     Root frontend image build
+docker-compose.yml
+docker-compose.prod.yml
+vercel.json    Root-project Vercel configuration
 ```
 
-## 🚀 Quick Start (Local Development)
+## Local development
 
-### Prerequisites
+### Requirements
 
-- PHP 8.2+ & Composer
-- Node.js 18+ & NPM
-- MySQL 8+
+- PHP 8.2+
+- Composer 2
+- Node.js 20 LTS and npm
+- MySQL 8, or SQLite for local development
 
-### 1. Clone & Setup
+### Backend
 
-```bash
-git clone https://github.com/abx15/laravel-react-ecommerce.git
-cd laravel-react-ecommerce
-```
-
-### 2. Backend Setup
-
-```bash
+```powershell
 cd backend
 composer install
-cp .env.example .env
+Copy-Item .env.example .env
 php artisan key:generate
 php artisan migrate --seed
-php artisan storage:link
 php artisan serve
 ```
 
-### 3. Frontend Setup
+Configure database credentials, application URL, CORS origins, and Razorpay keys in `backend/.env`. Do not commit real credentials.
 
-```bash
+For MySQL, set `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD`. The example environment defaults to SQLite for a quick local setup.
+
+### Frontend
+
+In a second terminal:
+
+```powershell
 cd frontend
-npm install
+npm ci
+Copy-Item .env.example .env.local
 npm run dev
 ```
 
-Access the app at `http://localhost:5175`.
+Set `VITE_API_BASE_URL=http://localhost:8000/api` in `frontend/.env.local`. Vite serves the frontend at the URL printed by the dev server (normally `http://localhost:5173`).
 
-## 🐳 Docker Usage
+### Checks
 
-We provide a production-ready Docker setup for the frontend.
-
-### Build and Run
-
-```bash
-# Build the image
-docker build -t ecomer-frontend .
-
-# Run the container
-docker run -p 8080:80 ecomer-frontend
+```powershell
+cd frontend
+npm run lint
+npm run build
 ```
 
-Access the frontend at `http://localhost:8080`.
+```powershell
+cd backend
+php artisan route:list
+php artisan test
+```
 
-## 🔄 CI/CD Pipeline
+## Deployment
 
-This repository uses **GitHub Actions** for continuous integration:
+### Vercel — React frontend
 
-- **Frontend Build**: Linting and building the React application.
-- **Backend Tests**: Running PHPUnit tests with a MySQL service.
+Recommended configuration when importing the repository:
 
-Check `.github/workflows/ci.yml` for details.
+- **Root Directory:** `frontend`
+- **Framework Preset:** Vite
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Install Command:** `npm ci`
+- **Environment Variable:** `VITE_API_BASE_URL=https://YOUR-API-HOST/api`
 
-## ☁️ Deployment
+The `frontend/vercel.json` rewrite supports React Router deep links. If deploying with the repository root as the Vercel project root instead, the root `vercel.json` runs the frontend install/build commands and publishes `frontend/dist`.
 
-### Vercel (Frontend)
+### Render — Laravel API
 
-This project is configured for Vercel. The `vercel.json` ensures that client-side routing works correctly.
+Create a **Docker** web service on Render connected to this repository with these settings:\n\n- **Root Directory:** `backend`\n- **Environment:** Docker\n- **Dockerfile Path:** `./Dockerfile` (relative to the backend root)\n- **Health Check Path:** `/up`\n\nThe backend image runs Nginx + PHP-FPM under Supervisor and serves Laravel from `backend/public`. The image includes the Nginx and Supervisor configuration files under `backend/docker/`. Ensure `storage` and `bootstrap/cache` remain writable. Provision a managed MySQL database and attach its private connection details to the service.
 
-1.  Import project to Vercel.
-2.  Set Root Directory to `frontend` (or keep root and set Build Command `npm run build` in `frontend`).
-3.  Deploy!
+Configure at minimum:
 
-### Environment Variables
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `APP_KEY` (generate securely with `php artisan key:generate --show` in a trusted environment)
+- `APP_URL=https://YOUR-API-HOST`
+- `DB_CONNECTION` and production database credentials
+- `CORS_ALLOWED_ORIGINS=https://YOUR-FRONTEND-DOMAIN`
+- `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` (only if payments are enabled)
 
-See `backend/.env.example` and `frontend/.env.example` for required variables.
+Run migrations as a controlled release/deploy step: `php artisan migrate --force` (run from the backend application directory). Configure persistent storage or object storage for user-uploaded files; the container filesystem is ephemeral. Use managed database/Redis services where required. Never use the demo seed accounts or development credentials in production.
 
-## 🤝 Contributing
+> **Deployment status:** These instructions describe the intended split deployment. A successful production deployment still requires valid hosting accounts, environment variables, database provisioning, storage configuration, and a live smoke test.
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+## Security and production notes
 
-## 💖 Support & Sponsorship
+- Keep `.env`, API secrets, payment secrets, and database credentials out of Git.
+- Use HTTPS for both frontend and API.
+- Restrict CORS to the exact frontend origin.
+- Configure a durable disk/object-storage service for product images; container filesystems may be ephemeral.
+- Review role/ownership checks, payment verification, address/checkout flow, and rate limits before accepting real orders.
+- Do not expose seeded demo credentials in production.
 
-If you find this project useful, please consider sponsoring:
+## Contributing
 
-- [**GitHub Sponsors**](https://github.com/sponsors/abx15)
+1. Fork the repository.
+2. Create a focused branch: `git checkout -b fix/short-description`.
+3. Install backend and frontend dependencies.
+4. Run the checks relevant to your change.
+5. Open a pull request with the problem, implementation, and verification details.
 
-## 📄 License
+Please do not include secrets, customer data, or production database dumps in issues or pull requests.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## License
 
----
-
-**Maintained by [Arun Kumar Bind](https://github.com/abx15)**
+See [LICENSE](LICENSE).

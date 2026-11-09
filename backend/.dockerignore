@@ -8,7 +8,6 @@ Dockerfile
 
 # Composer
 /vendor/
-composer.lock
 
 # Laravel specific
 .env
@@ -59,5 +58,4 @@ SECURITY.md
 SUPPORT.md
 
 # Docker development files
-docker/
 .dockerignore
