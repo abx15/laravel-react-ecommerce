@@ -84,7 +84,7 @@ const AdminDashboard = () => {
 
   // CRUD Handlers
   const resetForm = () => {
-    setFormData({ name: '', price: '', stock: '', category_id: '', description: '', image: null });
+    setFormData({ name: '', price: '', stock: '', category_id: '', description: '', images: [] });
     setSelectedProduct(null);
   };
 
@@ -101,7 +101,7 @@ const AdminDashboard = () => {
       setShowAddModal(false);
       resetForm();
       fetchDashboardData();
-    } catch (error) {
+    } catch {
       alert('Failed to create product');
     }
   };
@@ -113,7 +113,7 @@ const AdminDashboard = () => {
       setShowEditModal(false);
       resetForm();
       fetchDashboardData();
-    } catch (error) {
+    } catch {
       alert('Failed to update product');
     }
   };
@@ -123,7 +123,7 @@ const AdminDashboard = () => {
     try {
       await api.delete(`/admin/products/${id}`);
       fetchDashboardData();
-    } catch (error) {
+    } catch {
       alert('Failed to delete product');
     }
   };
@@ -146,7 +146,7 @@ const AdminDashboard = () => {
     try {
       await api.patch(`/admin/sellers/${id}/approve`);
       fetchDashboardData();
-    } catch (err) { alert('Failed'); }
+    } catch { alert('Failed'); }
   };
 
   const handleRejectSeller = async (id) => {
@@ -155,7 +155,7 @@ const AdminDashboard = () => {
     try {
       await api.patch(`/admin/sellers/${id}/reject`, { rejection_reason: reason });
       fetchDashboardData();
-    } catch (err) { alert('Failed'); }
+    } catch { alert('Failed'); }
   };
 
   // Stat Component
@@ -277,6 +277,33 @@ const AdminDashboard = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'users' && (
+              <div>
+                <h4 className="text-lg font-bold text-gray-800 mb-6">Registered Customers</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50/50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Customer</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Email</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Joined</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {users.map(user => (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">{user.name}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{user.created_at ? new Date(user.created_at).toLocaleDateString('en-IN') : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!users.length && <p className="py-10 text-center text-sm text-gray-500">No customers found.</p>}
                 </div>
               </div>
             )}
