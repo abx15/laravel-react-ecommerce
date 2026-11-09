@@ -15,6 +15,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\WishlistController;
 
 // Public Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -35,6 +36,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/addresses', [AddressController::class, 'store']);
     Route::put('/addresses/{address}', [AddressController::class, 'update']);
     Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
+
+    // Customer wishlist: every query is scoped to the authenticated account.
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy']);
     Route::delete('/product-images/{id}', [ProductController::class, 'deleteImage']);
 
     // Cart Routes (require authentication)
