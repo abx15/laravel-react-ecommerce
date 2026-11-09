@@ -80,7 +80,7 @@ class SellerDashboardController extends Controller
         $seller = $request->user();
         
         $products = Product::where('seller_id', $seller->id)
-            ->with('category')
+            ->with(['category', 'images'])
             ->withCount('orderItems')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
