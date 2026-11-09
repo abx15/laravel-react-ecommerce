@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Seller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -148,6 +149,21 @@ class SuperAdminController extends Controller
         }
     }
 
+
+
+    public function approveSeller($sellerId)
+    {
+        $seller = Seller::with('user')->findOrFail($sellerId);
+        $seller->update(['status' => 'approved']);
+        if ($seller->user) {
+            $seller->user->update([
+                'is_seller_verified' => true,
+                'seller_verified_at' => now(),
+            ]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Seller approved successfully']);
+    }
 
     public function getAllOrders()
     {
