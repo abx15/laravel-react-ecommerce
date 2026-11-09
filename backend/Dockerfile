@@ -51,8 +51,52 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Copy and set up nginx configuration
 USER root
-COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
-COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN cat > /etc/nginx/conf.d/default.conf <<'NGINX'
+server {
+    listen 80;
+    server_name _;
+    root /var/www/public;
+    index index.php index.html;
+    client_max_body_size 20M;
+    location / { try_files $uri $uri/ /index.php?$query_string; }
+    location ~ \\.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\\.php)(/.+)$;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_read_timeout 120;
+    }
+    location ~ /\\. { deny all; }
+}
+NGINX
+RUN cat > /etc/supervisor/conf.d/supervisord.conf <<'SUPERVISOR'
+[supervisord]
+nodaemon=true
+user=root
+logfile=/dev/null
+pidfile=/run/supervisord.pid
+
+[program:php-fpm]
+command=/usr/local/sbin/php-fpm --nodaemonize
+autostart=true
+autorestart=true
+stdout_logfile=/dev/fd/1
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/fd/2
+stderr_logfile_maxbytes=0
+
+[program:nginx]
+command=/usr/sbin/nginx -g "daemon off;"
+autostart=true
+autorestart=true
+stdout_logfile=/dev/fd/1
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/fd/2
+stderr_logfile_maxbytes=0
+SUPERVISOR
 
 # Create storage directories and set permissions
 RUN mkdir -p /var/www/storage/app/public /var/www/storage/framework/cache /var/www/storage/framework/sessions /var/www/storage/framework/views \
