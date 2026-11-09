@@ -7,7 +7,7 @@ import { EffectCards } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/effect-cards';
 
-import api from '../../services/api';
+import api, { assetUrl } from '../../services/api';
 import { useLocation } from 'react-router-dom';
 import './SellerDashboard.css';
 
@@ -263,7 +263,7 @@ const SellerDashboard = () => {
                         <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-4">
-                              <img src={product.images?.[0]?.image_path || 'https://via.placeholder.com/40'} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-100 border border-gray-200" />
+                              <img src={assetUrl(product.images?.[0]?.image_path)} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-100 border border-gray-200" />
                               <div>
                                 <p className="text-sm font-bold text-gray-900">{product.name}</p>
                                 <p className="text-xs text-gray-500">{product.category?.name || 'Uncategorized'}</p>
