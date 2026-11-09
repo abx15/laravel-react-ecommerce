@@ -274,7 +274,7 @@ class SuperAdminController extends Controller
     public function updateUserRole(Request $request, $id)
     {
         $validated = $request->validate([
-            'role' => 'required|string|in:user,seller,admin',
+            'role' => 'required|string|in:user,admin',
         ]);
 
         $user = User::findOrFail($id);
