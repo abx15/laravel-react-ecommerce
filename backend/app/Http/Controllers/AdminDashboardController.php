@@ -10,6 +10,7 @@ use App\Models\Seller;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Traits\ApiResponse;
@@ -31,7 +32,7 @@ class AdminDashboardController extends Controller
                 'pending_sellers' => Seller::where('status', 'pending')->count(),
                 'total_products' => Product::count(),
                 'total_orders' => Order::count(),
-                'revenue' => Order::where('status', 'completed')->sum('total_amount') ?? 0,
+                'revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
             ];
 
             // Daily/Weekly Orders
@@ -42,7 +43,7 @@ class AdminDashboardController extends Controller
                 ->get();
 
             // Revenue Trend (Last 30 days)
-            $revenueTrend = Order::where('status', 'completed')
+            $revenueTrend = Order::where('payment_status', 'paid')
                 ->where('created_at', '>=', Carbon::now()->subDays(30))
                 ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue')
                 ->groupBy('date')
@@ -194,7 +195,8 @@ class AdminDashboardController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+            'images' => 'sometimes|array|max:8',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120'
         ]);
 
         $product = Product::create([
@@ -218,6 +220,7 @@ class AdminDashboardController extends Controller
 
                 // Define the destination path: public/assets/products/{category}
                 $destinationPath = public_path('assets/products/' . $categoryName);
+                File::ensureDirectoryExists($destinationPath);
 
                 // Move the file
                 $image->move($destinationPath, $filename);
@@ -290,7 +293,7 @@ class AdminDashboardController extends Controller
         $sellerPerformance = User::where('user_type', 'seller')
             ->where('is_seller_verified', true)
             ->withCount(['products', 'orders' => function ($query) {
-                $query->where('status', 'completed');
+                $query->where('payment_status', 'paid');
             }])
             ->withSum(['orders' => function ($query) {
                 $query->where('status', 'completed');

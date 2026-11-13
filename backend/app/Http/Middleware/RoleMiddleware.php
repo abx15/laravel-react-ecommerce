@@ -4,21 +4,34 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class RoleMiddleware
 {
-    public function handle(Request $request, Closure $next, $role)
+    public function handle(Request $request, Closure $next, string $role)
     {
-        $user = Auth::user();
-        
+        $user = $request->user();
+
         if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+            return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
         }
 
-        // Check if user has the required role
-        if (!$user->hasRole($role)) {
-            return response()->json(['message' => 'Unauthorized - insufficient permissions'], 403);
+        if ($user->is_blocked || $user->status !== 'active') {
+            return response()->json(['success' => false, 'message' => 'This account is inactive or blocked.'], 403);
+        }
+
+        $allowed = match ($role) {
+            'user' => $user->isUser(),
+            'seller' => $user->isSeller(),
+            'admin' => $user->isAdmin() || $user->isSuperAdmin(),
+            'super_admin', 'superadmin' => $user->isSuperAdmin(),
+            default => $user->hasRole($role),
+        };
+
+        if (!$allowed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Forbidden: insufficient role permissions.',
+            ], 403);
         }
 
         return $next($request);

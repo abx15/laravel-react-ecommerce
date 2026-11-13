@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\Seller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 
 class SuperAdminController extends Controller
 {
@@ -15,46 +16,57 @@ class SuperAdminController extends Controller
      */
     public function getDashboardStats()
     {
-        try {
-            // Count users by user_type (robust check)
-            $totalUsers = User::whereIn('user_type', ['user', 'User'])->count();
-            $totalAdmins = User::whereIn('user_type', ['admin', 'Admin'])->count();
-            $totalSellers = User::whereIn('user_type', ['seller', 'Seller'])->count();
+        $now = now();
+        $currentStart = $now->copy()->subDays(30);
+        $previousStart = $now->copy()->subDays(60);
 
-            // Calculate total revenue (if Order model exists)
-            $totalRevenue = 0;
-            if (class_exists(Order::class)) {
-                $totalRevenue = Order::where('status', 'delivered')
-                    ->sum('total_amount');
+        $growth = static function (float|int $current, float|int $previous): float {
+            if ($previous <= 0) {
+                return $current > 0 ? 100.0 : 0.0;
             }
 
-            // Mock growth percentages (you can calculate real growth later)
-            $stats = [
-                'total_users' => $totalUsers, // Changed key to match frontend expectation snake_case
-                'total_admins' => $totalAdmins,
-                'total_sellers' => $totalSellers,
-                'total_revenue' => $totalRevenue,
-                'user_growth' => 18.2,
-                'admin_growth' => 5.4,
-                'seller_growth' => 12.3,
-                'revenue_growth' => -22.1
-            ];
+            return round((($current - $previous) / $previous) * 100, 1);
+        };
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Dashboard stats fetched successfully',
-                'data' => [
-                    'stats' => $stats,
-                    'charts' => []
-                ]
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching dashboard statistics',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $totalUsers = User::where('user_type', 'user')->count();
+        $totalAdmins = User::where('user_type', 'admin')->count();
+        $totalSellers = User::where('user_type', 'seller')->count();
+
+        $currentRevenue = (float) Order::where('payment_status', 'paid')
+            ->where('created_at', '>=', $currentStart)
+            ->sum('total_amount');
+        $previousRevenue = (float) Order::where('payment_status', 'paid')
+            ->whereBetween('created_at', [$previousStart, $currentStart])
+            ->sum('total_amount');
+
+        $stats = [
+            'total_users' => $totalUsers,
+            'total_admins' => $totalAdmins,
+            'total_sellers' => $totalSellers,
+            'total_revenue' => (float) Order::where('payment_status', 'paid')->sum('total_amount'),
+            'user_growth' => $growth(
+                User::where('user_type', 'user')->where('created_at', '>=', $currentStart)->count(),
+                User::where('user_type', 'user')->whereBetween('created_at', [$previousStart, $currentStart])->count()
+            ),
+            'admin_growth' => $growth(
+                User::where('user_type', 'admin')->where('created_at', '>=', $currentStart)->count(),
+                User::where('user_type', 'admin')->whereBetween('created_at', [$previousStart, $currentStart])->count()
+            ),
+            'seller_growth' => $growth(
+                User::where('user_type', 'seller')->where('created_at', '>=', $currentStart)->count(),
+                User::where('user_type', 'seller')->whereBetween('created_at', [$previousStart, $currentStart])->count()
+            ),
+            'revenue_growth' => $growth($currentRevenue, $previousRevenue),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Platform statistics fetched successfully',
+            'data' => [
+                'stats' => $stats,
+                'charts' => [],
+            ],
+        ]);
     }
 
     /**
@@ -147,55 +159,113 @@ class SuperAdminController extends Controller
         }
     }
 
+
+
+    public function approveSeller($sellerId)
+    {
+        $seller = Seller::with('user')->findOrFail($sellerId);
+        $seller->update(['status' => 'approved']);
+        if ($seller->user) {
+            $seller->user->update([
+                'is_seller_verified' => true,
+                'seller_verified_at' => now(),
+            ]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Seller approved successfully']);
+    }
+
+    public function getAllOrders()
+    {
+        $orders = Order::with(['user', 'items.product', 'payment'])
+            ->latest()
+            ->paginate(25);
+
+        return response()->json(['success' => true, 'data' => $orders]);
+    }
+
+    public function getAllProducts()
+    {
+        $products = Product::with(['category', 'seller', 'images'])
+            ->latest()
+            ->paginate(25);
+
+        return response()->json(['success' => true, 'data' => $products]);
+    }
+
     /**
      * Create New Admin
      */
     public function createAdmin(Request $request)
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
-                'password' => 'required|string|min:8'
-            ]);
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:12',
+        ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $admin = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
+        $admin = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
                 'user_type' => 'admin', // Using user_type
                 'status' => 'active'
             ]);
 
-            // Assign Spatie role if available
-            if (method_exists($admin, 'assignRole')) {
-                try {
-                    $admin->assignRole('admin');
-                } catch (\Exception $e) {
-                    // Ignore if role doesn't exist
-                }
-            }
+            $admin->assignRole('admin');
 
             return response()->json([
                 'success' => true,
                 'message' => 'Admin created successfully',
                 'data' => $admin
             ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error creating admin',
-                'error' => $e->getMessage()
-            ], 500);
+    }
+
+
+    /**
+     * Update an administrator account.
+     */
+    public function updateAdmin(Request $request, $id)
+    {
+        $admin = User::where('user_type', 'admin')->findOrFail($id);
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|email|max:255|unique:users,email,' . $admin->id,
+            'password' => 'sometimes|nullable|string|min:8',
+            'status' => 'sometimes|required|in:active,inactive',
+        ]);
+
+        if (!empty($validated['password'])) {
+            $validated['password'] = Hash::make($validated['password']);
+        } else {
+            unset($validated['password']);
         }
+
+        $admin->fill($validated);
+        $admin->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Administrator updated successfully',
+            'data' => $admin->only(['id', 'name', 'email', 'user_type', 'status', 'updated_at']),
+        ]);
+    }
+
+    /**
+     * Delete an administrator account.
+     */
+    public function deleteAdmin(Request $request, $id)
+    {
+        $admin = User::where('user_type', 'admin')->findOrFail($id);
+        if ((int) $request->user()->id === (int) $admin->id) {
+            return response()->json(['success' => false, 'message' => 'You cannot delete your own active administrator account.'], 422);
+        }
+        $admin->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Administrator deleted successfully',
+        ]);
     }
 
     /**
@@ -203,44 +273,35 @@ class SuperAdminController extends Controller
      */
     public function updateUserRole(Request $request, $id)
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'role' => 'required|string|in:user,admin,seller,super_admin'
-            ]);
+        $validated = $request->validate([
+            'role' => 'required|string|in:user,admin',
+        ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
+        $user = User::findOrFail($id);
 
-            $user = User::findOrFail($id);
-            $user->user_type = $request->role; // Update user_type
-            $user->save();
-
-            // Sync Spatie roles if available
-            if (method_exists($user, 'syncRoles')) {
-                try {
-                    $user->syncRoles([$request->role]);
-                } catch (\Exception $e) {
-                    // Ignore
-                }
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'User role updated successfully',
-                'data' => $user
-            ], 200);
-        } catch (\Exception $e) {
+        if ($user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error updating user role',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Super Admin roles cannot be changed through user management.',
+            ], 403);
         }
+
+        if ((int) $request->user()->id === (int) $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot change your own role.',
+            ], 422);
+        }
+
+        $user->user_type = $validated['role'];
+        $user->save();
+        $user->syncRoles($validated['role'] === 'seller' ? ['user', 'seller'] : [$validated['role']]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User role updated successfully',
+            'data' => $user->fresh()->load('roles'),
+        ]);
     }
 
     /**
@@ -252,11 +313,15 @@ class SuperAdminController extends Controller
             $user = User::findOrFail($id);
 
             // Prevent deleting super admin
-            if ($user->user_type === 'super_admin' || $user->user_type === 'superadmin') {
+            if ($user->isSuperAdmin()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cannot delete Super Admin account'
                 ], 403);
+            }
+
+            if ((int) request()->user()->id === (int) $user->id) {
+                return response()->json(['success' => false, 'message' => 'You cannot delete your own account.'], 422);
             }
 
             $user->delete();

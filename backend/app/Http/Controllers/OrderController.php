@@ -2,123 +2,182 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Address;
+use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Cart;
-use App\Models\Address;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
-use Razorpay\Api\Api;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Razorpay\Api\Api;
 
 class OrderController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, AuthorizesRequests;
 
     public function index(Request $request)
     {
         $orders = Order::where('user_id', $request->user()->id)
-            ->with(['items.product', 'payment'])
+            ->with(['items.product.images', 'payment', 'address'])
             ->latest()
-            ->get();
+            ->paginate(20);
+
         return $this->success($orders);
     }
 
     public function adminIndex()
     {
-        $orders = Order::with(['user', 'items', 'payment'])->latest()->paginate(20);
-        return $this->success($orders);
+        return $this->success(
+            Order::with(['user', 'items.product', 'payment', 'address'])->latest()->paginate(20)
+        );
     }
 
     public function show(Order $order, Request $request)
     {
-        if ($order->user_id !== $request->user()->id && !$request->user()->hasRole(['admin', 'super_admin'])) {
+        if (
+            (int) $order->user_id !== (int) $request->user()->id
+            && !$request->user()->isAdmin()
+            && !$request->user()->isSuperAdmin()
+        ) {
             return $this->error('Unauthorized', 403);
         }
-        return $this->success($order->load(['items.product', 'payment', 'address']));
+
+        return $this->success($order->load(['items.product.images', 'payment', 'address']));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'address_id' => 'required|exists:addresses,id', // Assuming user selects existing address OR sends address data. Simplified for now.
-            // If address data sent inline, need different logic. Let's assume user creates address first or sends ID.
-            // Given "Addresses" is a required table, I should probably allow creating one.
-            // But let's stick to reference for simplicity in this step, or inline.
+            'address_id' => 'nullable|integer|exists:addresses,id',
+            'shipping_address' => 'required_without:address_id|array',
+            'shipping_address.address_line_1' => 'required_without:address_id|string|max:255',
+            'shipping_address.address_line_2' => 'nullable|string|max:255',
+            'shipping_address.city' => 'required_without:address_id|string|max:120',
+            'shipping_address.state' => 'required_without:address_id|string|max:120',
+            'shipping_address.zip_code' => 'required_without:address_id|string|max:20',
+            'shipping_address.country' => 'required_without:address_id|string|max:100',
         ]);
 
-        // Actually, better to allow inline address creation or ID.
-        // Let's assume ID for now to keep it clean.
+        if (!config('services.razorpay.key') || !config('services.razorpay.secret')) {
+            return $this->error('Online payment is not configured yet. Please contact the store administrator.', 503);
+        }
 
         $user = $request->user();
-        $cart = Cart::where('user_id', $user->id)->with('items.product')->first();
-
-        if (!$cart || $cart->items->isEmpty()) {
-            return $this->error('Cart is empty', 400);
-        }
-
-        // Calculate total
-        $total = 0;
-        foreach ($cart->items as $item) {
-            $total += $item->product->price * $item->quantity;
-        }
 
         try {
-            DB::beginTransaction();
+            $result = DB::transaction(function () use ($validated, $user) {
+                $cart = Cart::where('user_id', $user->id)
+                    ->with('items.product')
+                    ->lockForUpdate()
+                    ->first();
 
-            $order = Order::create([
-                'user_id' => $user->id,
-                'address_id' => $validated['address_id'],
-                'total_amount' => $total,
-                'status' => 'pending',
-                'payment_status' => 'pending'
-            ]);
+                if (!$cart || $cart->items->isEmpty()) {
+                    throw ValidationException::withMessages([
+                        'cart' => ['Your cart is empty.'],
+                    ]);
+                }
 
-            foreach ($cart->items as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->product->price
+                $address = null;
+
+                if (!empty($validated['address_id'])) {
+                    $address = Address::where('user_id', $user->id)
+                        ->find($validated['address_id']);
+
+                    if (!$address) {
+                        throw ValidationException::withMessages([
+                            'address_id' => ['The selected address does not belong to your account.'],
+                        ]);
+                    }
+                } else {
+                    $address = Address::create([
+                        'user_id' => $user->id,
+                        ...$validated['shipping_address'],
+                    ]);
+                }
+
+                $total = 0;
+
+                foreach ($cart->items as $item) {
+                    $product = $item->product;
+
+                    if (!$product || !$product->is_active || $product->stock < $item->quantity) {
+                        throw ValidationException::withMessages([
+                            'cart' => [($product?->name ?? 'A product') . ' is no longer available in the requested quantity.'],
+                        ]);
+                    }
+
+                    $total += (float) $product->price * $item->quantity;
+                }
+
+                $order = Order::create([
+                    'user_id' => $user->id,
+                    'address_id' => $address->id,
+                    'total_amount' => $total,
+                    'status' => 'pending',
+                    'payment_status' => 'pending',
                 ]);
-            }
 
-            // Razorpay Order Creation
-            $api = new Api(env('RAZORPAY_KEY_ID'), env('RAZORPAY_KEY_SECRET'));
-            $razorpayOrder = $api->order->create([
-                'receipt' => 'order_' . $order->id,
-                'amount' => $total * 100, // Amount in paise
-                'currency' => 'INR'
-            ]);
+                foreach ($cart->items as $item) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $item->product_id,
+                        'quantity' => $item->quantity,
+                        'price' => $item->product->price,
+                    ]);
+                }
 
-            $order->razorpay_order_id = $razorpayOrder->id;
-            $order->save();
+                $razorpay = new Api(
+                    config('services.razorpay.key'),
+                    config('services.razorpay.secret')
+                );
 
-            // Clear Cart
-            $cart->items()->delete();
+                $razorpayOrder = $razorpay->order->create([
+                    'receipt' => 'order_' . $order->id,
+                    'amount' => (int) round($total * 100),
+                    'currency' => 'INR',
+                ]);
 
-            DB::commit();
+                $order->update(['razorpay_order_id' => $razorpayOrder->id]);
 
-            return $this->success([
-                'order' => $order->load('items'),
-                'razorpay_order_id' => $razorpayOrder->id,
-                'amount' => $total * 100,
-                'currency' => 'INR',
-                'key' => env('RAZORPAY_KEY_ID')
-            ], 'Order created initiated', 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->error('Order creation failed: ' . $e->getMessage(), 500);
+                return [
+                    'order' => $order->load(['items.product.images', 'address']),
+                    'razorpay_order_id' => $razorpayOrder->id,
+                    'amount' => (int) round($total * 100),
+                    'currency' => 'INR',
+                    'key' => config('services.razorpay.key'),
+                ];
+            });
+
+            return $this->success($result, 'Order created. Complete payment to confirm it.', 201);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->error('We could not create your order. Please try again.', 500);
         }
     }
 
     public function updateStatus(Request $request, Order $order)
     {
+        $this->authorize('access-admin-dashboard', $request->user());
+
         $validated = $request->validate([
-            'status' => 'required|in:pending,processing,shipped,delivered,cancelled'
+            'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
         ]);
 
+        if ($order->payment_status !== 'paid' && in_array($validated['status'], ['processing', 'shipped', 'delivered'], true)) {
+            return $this->error('An order must be paid before it can be processed or fulfilled.', 422);
+        }
+
+        if ($order->status === 'delivered' && $validated['status'] !== 'delivered') {
+            return $this->error('A delivered order cannot be moved to another status.', 422);
+        }
+
         $order->update(['status' => $validated['status']]);
-        return $this->success($order, 'Order status updated');
+
+        return $this->success($order->load(['user', 'items.product', 'payment']), 'Order status updated');
     }
 }

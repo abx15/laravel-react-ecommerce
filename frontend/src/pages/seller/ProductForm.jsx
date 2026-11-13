@@ -98,8 +98,8 @@ const ProductForm = () => {
 
         try {
             const url = isEditMode
-                ? `/products/${id}`
-                : '/products';
+                ? `/seller/products/${id}`
+                : '/seller/products';
 
             await api.post(url, data);
 

@@ -93,7 +93,7 @@ const Home = () => {
                                         <img src={product.images?.[0]?.image_path || '/placeholder.jpg'} alt={product.name} className="max-h-full max-w-full" />
                                     </div>
                                     <h3 className="font-medium text-sm line-clamp-2 mb-2">{product.name}</h3>
-                                    <span className="text-[#B12704] font-bold">${product.price}</span>
+                                    <span className="text-[#B12704] font-bold">₹{product.price}</span>
                                 </div>
                             ))}
                         </div>

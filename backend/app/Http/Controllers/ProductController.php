@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -15,23 +16,48 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'images'])->where('is_active', true);
+        $validated = $request->validate([
+            'category_id' => 'sometimes|integer|exists:categories,id',
+            'search' => 'sometimes|string|max:120',
+            'sort' => 'sometimes|in:name,price_asc,price_desc,created_at',
+            'limit' => 'sometimes|integer|min:1|max:48',
+            'per_page' => 'sometimes|integer|min:1|max:48',
+        ]);
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        $query = Product::query()
+            ->with(['category', 'images'])
+            ->where('is_active', true);
+
+        if (!empty($validated['category_id'])) {
+            $query->where('category_id', $validated['category_id']);
         }
 
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+        if (!empty($validated['search'])) {
+            $search = trim($validated['search']);
+            $query->where(function ($builder) use ($search) {
+                $builder->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%');
+            });
         }
 
-        $products = $query->paginate(12);
+        match ($validated['sort'] ?? 'created_at') {
+            'name' => $query->orderBy('name'),
+            'price_asc' => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            default => $query->latest(),
+        };
 
-        return $this->success($products);
+        return $this->success($query->paginate(
+            $validated['per_page'] ?? $validated['limit'] ?? 12
+        ));
     }
 
     public function show(Product $product)
     {
+        if (!$product->is_active) {
+            return $this->error('Product not found', 404);
+        }
+
         return $this->success($product->load(['category', 'images']));
     }
 
@@ -43,14 +69,15 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images' => 'sometimes|array|max:8',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
             'original_price' => 'nullable|numeric|min:0',
-            'discount_percentage' => 'nullable|integer|min:0|max:100'
+            'discount_percentage' => 'nullable|integer|min:0|max:100',
         ]);
 
         $product = Product::create([
             'name' => $validated['name'],
-            'slug' => Str::slug($validated['name']) . '-' . uniqid(),
+            'slug' => Str::slug($validated['name']) . '-' . Str::lower(Str::random(8)),
             'description' => $validated['description'],
             'price' => $validated['price'],
             'original_price' => $validated['original_price'] ?? null,
@@ -61,33 +88,17 @@ class ProductController extends Controller
             'seller_id' => $request->user()->id,
         ]);
 
-        if ($request->hasFile('images')) {
-            $category = \App\Models\Category::find($validated['category_id']);
-            $categoryName = $category ? Str::slug($category->name) : 'uncategorized';
+        $this->storeProductImages($request, $product);
 
-            foreach ($request->file('images') as $index => $image) {
-                // Generate a unique filename
-                $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-
-                // Define the destination path: public/assets/products/{category}
-                $destinationPath = public_path('assets/products/' . $categoryName);
-
-                // Move the file
-                $image->move($destinationPath, $filename);
-
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'image_path' => '/assets/products/' . $categoryName . '/' . $filename,
-                    'is_primary' => $index === 0
-                ]);
-            }
-        }
-
-        return $this->success($product->load('images'), 'Product created successfully', 201);
+        return $this->success($product->load(['category', 'images']), 'Product created successfully', 201);
     }
 
     public function update(Request $request, Product $product)
     {
+        if ($product->seller_id !== $request->user()->id) {
+            return $this->error('You can only update your own products.', 403);
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
@@ -96,52 +107,79 @@ class ProductController extends Controller
             'discount_percentage' => 'nullable|integer|min:0|max:100',
             'stock' => 'sometimes|integer|min:0',
             'category_id' => 'sometimes|exists:categories,id',
-            'is_active' => 'boolean'
+            'is_active' => 'sometimes|boolean',
+            'images' => 'sometimes|array|max:8',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         if (isset($validated['name'])) {
-            $validated['slug'] = Str::slug($validated['name']) . '-' . uniqid();
+            $validated['slug'] = Str::slug($validated['name']) . '-' . Str::lower(Str::random(8));
         }
 
-        $product->update($validated);
+        $product->update(collect($validated)->except('images')->all());
+        $this->storeProductImages($request, $product);
 
-        // Handle Image Uploads (Append to existing)
-        if ($request->hasFile('images')) {
-            $product->load('category'); // Ensure category is loaded
-            $category = $product->category;
-            $categoryName = $category ? Str::slug($category->name) : 'uncategorized';
-
-            foreach ($request->file('images') as $image) {
-                $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $destinationPath = public_path('assets/products/' . $categoryName);
-                $image->move($destinationPath, $filename);
-
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'image_path' => '/assets/products/' . $categoryName . '/' . $filename,
-                    'is_primary' => false // Appended images are not primary by default
-                ]);
-            }
-        }
-
-        return $this->success($product->load('images'), 'Product updated successfully');
+        return $this->success($product->load(['category', 'images']), 'Product updated successfully');
     }
 
-    public function deleteImage($imageId)
+    private function storeProductImages(Request $request, Product $product): void
     {
-        $image = ProductImage::find($imageId);
-        if (!$image) return $this->error('Image not found', 404);
+        if (!$request->hasFile('images')) {
+            return;
+        }
 
-        // Optional: Delete from storage
-        // if(file_exists(public_path($image->image_path))) { unlink(public_path($image->image_path)); }
+        $category = Category::find($product->category_id);
+        $categoryName = $category ? Str::slug($category->name) : 'uncategorized';
+        $relativeDirectory = 'assets/products/' . $categoryName;
+        $destination = public_path($relativeDirectory);
+
+        File::ensureDirectoryExists($destination);
+
+        foreach ($request->file('images') as $index => $image) {
+            $filename = Str::uuid() . '.' . $image->extension();
+            $image->move($destination, $filename);
+
+            ProductImage::create([
+                'product_id' => $product->id,
+                'image_path' => '/' . $relativeDirectory . '/' . $filename,
+                'is_primary' => !$product->images()->where('is_primary', true)->exists() && $index === 0,
+            ]);
+        }
+    }
+
+    public function deleteImage(Request $request, $id)
+    {
+        $image = ProductImage::with('product')->find($id);
+
+        if (!$image) {
+            return $this->error('Image not found', 404);
+        }
+
+        $user = $request->user();
+        $isAdmin = $user->hasRole(['admin', 'super_admin']);
+        $ownsProduct = $user->user_type === 'seller' && $image->product->seller_id === $user->id;
+        if (!$isAdmin && !$ownsProduct) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $path = public_path(ltrim($image->image_path, '/'));
+        if (is_file($path)) {
+            @unlink($path);
+        }
 
         $image->delete();
+
         return $this->success([], 'Image deleted successfully');
     }
 
-    public function destroy(Product $product)
+    public function destroy(Request $request, Product $product)
     {
+        if ($product->seller_id !== $request->user()->id) {
+            return $this->error('You can only delete your own products.', 403);
+        }
+
         $product->delete();
+
         return $this->success([], 'Product deleted successfully');
     }
 
@@ -149,8 +187,8 @@ class ProductController extends Controller
     {
         $products = Product::where('seller_id', $request->user()->id)
             ->with(['category', 'images'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->latest()
+            ->paginate(20);
 
         return $this->success($products);
     }

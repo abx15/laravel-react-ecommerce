@@ -7,7 +7,7 @@ import { EffectCards } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/effect-cards';
 
-import api from '../../services/api';
+import api, { assetUrl } from '../../services/api';
 import { useLocation } from 'react-router-dom';
 import './SellerDashboard.css';
 
@@ -214,7 +214,7 @@ const SellerDashboard = () => {
 
         {/* Stats Grid (Hidden on mobile for brevity) */}
         <div className="hidden lg:grid grid-cols-4 gap-6">
-          <StatCard title="Total Revenue" value={`$${stats?.my_revenue || 0}`} icon={<FiDollarSign />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" trend={12.5} />
+          <StatCard title="Total Revenue" value={`₹${stats?.my_revenue || 0}`} icon={<FiDollarSign />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" trend={12.5} />
           <StatCard title="Products" value={stats?.my_products_count || 0} icon={<FiPackage />} gradient="bg-gradient-to-br from-blue-500 to-indigo-600" trend={8.1} />
           <StatCard title="Orders" value={stats?.my_orders || 0} icon={<FiShoppingCart />} gradient="bg-gradient-to-br from-orange-400 to-pink-500" trend={15.4} />
           <StatCard title="Avg Rating" value="4.8" icon={<FiStar />} gradient="bg-gradient-to-br from-purple-500 to-violet-600" trend={0.0} />
@@ -235,6 +235,71 @@ const SellerDashboard = () => {
                 <img src="/placeholder_chart.svg" alt="Analytics" className="w-64 opacity-50 mb-4" />
                 {/* Placeholder for now as users mainly want product tab functionality */}
                 <p className="text-gray-500">Sales overview and recent activity will appear here.</p>
+              </div>
+            )}
+
+            {activeTab === 'orders' && (
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-100">
+                  <h3 className="text-lg font-bold text-gray-900">Customer orders</h3>
+                  <p className="mt-1 text-sm text-gray-500">Orders containing your products.</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Order</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Customer</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Items</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Order total</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {orders.map(order => (
+                        <tr key={order.id}>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">#{order.id}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{order.user?.name || 'Customer'}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{order.order_items?.length || order.orderItems?.length || 0}</td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{Number(order.total_amount || 0).toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4"><span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold capitalize text-gray-700">{order.status}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!orders.length && <p className="py-10 text-center text-sm text-gray-500">No orders yet.</p>}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'analytics' && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-900">Sales over the last 30 days</h3>
+                  <div className="mt-5 h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={stats?.charts?.sales_over_time || []}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="revenue" stroke="#059669" fill="#A7F3D0" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </section>
+                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-900">Top selling products</h3>
+                  <div className="mt-5 space-y-3">
+                    {(stats?.charts?.top_selling_products || []).map(product => (
+                      <div key={product.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+                        <span className="font-medium text-gray-800">{product.name}</span>
+                        <span className="text-sm font-semibold text-emerald-700">{product.order_items_count || 0} sold</span>
+                      </div>
+                    ))}
+                    {!stats?.charts?.top_selling_products?.length && <p className="py-8 text-sm text-gray-500">Sales analytics will appear after your first orders.</p>}
+                  </div>
+                </section>
               </div>
             )}
 
@@ -263,7 +328,7 @@ const SellerDashboard = () => {
                         <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-4">
-                              <img src={product.images?.[0]?.image_path || 'https://via.placeholder.com/40'} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-100 border border-gray-200" />
+                              <img src={assetUrl(product.images?.[0]?.image_path)} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-100 border border-gray-200" />
                               <div>
                                 <p className="text-sm font-bold text-gray-900">{product.name}</p>
                                 <p className="text-xs text-gray-500">{product.category?.name || 'Uncategorized'}</p>
@@ -272,7 +337,7 @@ const SellerDashboard = () => {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <span className="text-sm font-bold text-emerald-600">${product.price}</span>
+                              <span className="text-sm font-bold text-emerald-600">₹{product.price}</span>
                               {product.original_price && <span className="text-xs text-gray-400 line-through">${product.original_price}</span>}
                               {product.discount_percentage > 0 && <span className="text-xs text-green-600 font-medium">{product.discount_percentage}% OFF</span>}
                             </div>

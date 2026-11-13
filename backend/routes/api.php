@@ -14,6 +14,8 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\UserDashboardController;
+use App\Http\Controllers\AddressController;
+use App\Http\Controllers\WishlistController;
 
 // Public Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -28,6 +30,17 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Customer-owned saved addresses (also usable by sellers who shop as customers).
+    Route::get('/addresses', [AddressController::class, 'index']);
+    Route::post('/addresses', [AddressController::class, 'store']);
+    Route::put('/addresses/{address}', [AddressController::class, 'update']);
+    Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
+
+    // Customer wishlist: every query is scoped to the authenticated account.
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy']);
     Route::delete('/product-images/{id}', [ProductController::class, 'deleteImage']);
 
     // Cart Routes (require authentication)
@@ -78,6 +91,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/admin/users', [AdminDashboardController::class, 'getUsers']);
         Route::get('/admin/seller-requests', [AdminDashboardController::class, 'getSellerRequests']);
         Route::get('/admin/analytics', [AdminDashboardController::class, 'getAnalytics']);
+        Route::post('/admin/categories', [CategoryController::class, 'store']);
+        Route::put('/admin/categories/{category}', [CategoryController::class, 'update']);
+        Route::delete('/admin/categories/{category}', [CategoryController::class, 'destroy']);
+        Route::patch('/admin/orders/{order}/status', [OrderController::class, 'updateStatus']);
 
         Route::post('/admin/products', [AdminDashboardController::class, 'storeProduct']);
         Route::put('/admin/products/{product}', [AdminDashboardController::class, 'updateProduct']);
@@ -97,9 +114,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/admins', [SuperAdminController::class, 'getAllAdmins']);
         Route::get('/users', [SuperAdminController::class, 'getAllUsers']);
         Route::get('/sellers', [SuperAdminController::class, 'getAllSellers']);
+        Route::get('/orders', [SuperAdminController::class, 'getAllOrders']);
+        Route::get('/products', [SuperAdminController::class, 'getAllProducts']);
+        Route::patch('/sellers/{sellerId}/approve', [SuperAdminController::class, 'approveSeller']);
 
         // User Management
         Route::post('/admins', [SuperAdminController::class, 'createAdmin']);
+        Route::put('/admins/{id}', [SuperAdminController::class, 'updateAdmin']);
+        Route::delete('/admins/{id}', [SuperAdminController::class, 'deleteAdmin']);
         Route::put('/users/{id}/role', [SuperAdminController::class, 'updateUserRole']);
         Route::delete('/users/{id}', [SuperAdminController::class, 'deleteUser']);
     });

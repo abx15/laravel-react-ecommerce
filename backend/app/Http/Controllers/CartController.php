@@ -14,9 +14,9 @@ class CartController extends Controller
 
     public function index(Request $request)
     {
-        $cart = Cart::with(['items.product.images'])->firstOrCreate(
-            ['user_id' => $request->user()->id]
-        );
+        $cart = Cart::with(['items.product.images'])->firstOrCreate([
+            'user_id' => $request->user()->id,
+        ]);
 
         return $this->success($cart);
     }
@@ -25,60 +25,60 @@ class CartController extends Controller
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1'
+            'quantity' => 'required|integer|min:1|max:99',
         ]);
 
-        $cart = Cart::firstOrCreate(
-            ['user_id' => $request->user()->id]
-        );
+        $cart = Cart::firstOrCreate([
+            'user_id' => $request->user()->id,
+        ]);
 
-        $product = Product::find($validated['product_id']);
-
-        // check stock
-        if ($product->stock < $validated['quantity']) {
-            return $this->error('Insufficient stock', 400);
-        }
-
-        $cartItem = CartItem::updateOrCreate(
-            ['cart_id' => $cart->id, 'product_id' => $validated['product_id']],
-            ['quantity' => $validated['quantity']] // This replaces quantity. Or should it increment? Usually 'Add to cart' increments if exists.
-            // Requirement doesn't specify. I'll make it increment if exists, or just set. Standard specific 'Add' usually implies increment.
-            // But typical updateOrCreate logic replaces. I'll do manual check.
-        );
-
-        // Let's rewrite to increment properly
+        $product = Product::where('is_active', true)->findOrFail($validated['product_id']);
         $existing = CartItem::where('cart_id', $cart->id)
-            ->where('product_id', $validated['product_id'])
+            ->where('product_id', $product->id)
             ->first();
 
+        $nextQuantity = ($existing?->quantity ?? 0) + $validated['quantity'];
+
+        if ($product->stock < $nextQuantity) {
+            return $this->error('Only ' . $product->stock . ' item(s) are available in stock.', 422);
+        }
+
         if ($existing) {
-            $existing->increment('quantity', $validated['quantity']);
-            $cartItem = $existing;
+            $existing->update(['quantity' => $nextQuantity]);
         } else {
-            $cartItem = CartItem::create([
+            CartItem::create([
                 'cart_id' => $cart->id,
-                'product_id' => $validated['product_id'],
-                'quantity' => $validated['quantity']
+                'product_id' => $product->id,
+                'quantity' => $validated['quantity'],
             ]);
         }
 
-        return $this->success($cart->load('items.product'), 'Item added to cart');
+        return $this->success(
+            $cart->load('items.product.images'),
+            'Item added to cart'
+        );
     }
 
     public function update(Request $request, CartItem $cartItem)
     {
-        // Ensure user owns this cart item
         if ($cartItem->cart->user_id !== $request->user()->id) {
             return $this->error('Unauthorized', 403);
         }
 
         $validated = $request->validate([
-            'quantity' => 'required|integer|min:1'
+            'quantity' => 'required|integer|min:1|max:99',
         ]);
+
+        if ($cartItem->product->stock < $validated['quantity']) {
+            return $this->error('Requested quantity is not available in stock.', 422);
+        }
 
         $cartItem->update(['quantity' => $validated['quantity']]);
 
-        return $this->success($cartItem->cart->load('items.product'), 'Cart updated');
+        return $this->success(
+            $cartItem->cart->load('items.product.images'),
+            'Cart updated'
+        );
     }
 
     public function destroy(Request $request, CartItem $cartItem)

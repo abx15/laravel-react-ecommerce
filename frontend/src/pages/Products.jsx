@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import ProductCard from '../components/ProductCard';
 
 const Products = () => {
+    const [searchParams] = useSearchParams();
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState(() => searchParams.get('search') || '');
     const [sortBy, setSortBy] = useState('name');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchCategories();
-        fetchProducts();
     }, []);
+
+    useEffect(() => {
+        setSearchTerm(searchParams.get('search') || '');
+    }, [searchParams]);
 
     useEffect(() => {
         fetchProducts();

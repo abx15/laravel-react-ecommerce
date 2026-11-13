@@ -136,6 +136,13 @@ function App() {
                 </DashboardLayout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/users" element={
+              <ProtectedRoute roles={['admin']}>
+                <DashboardLayout>
+                  <AdminDashboardNew />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/admin/orders" element={
               <ProtectedRoute roles={['admin']}>
                 <DashboardLayout>

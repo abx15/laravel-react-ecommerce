@@ -8,7 +8,7 @@ import 'swiper/css/effect-cards';
 import api from '../../services/api';
 import './UserDashboard.css';
 
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './UserDashboard.css';
 
 const UserDashboard = () => {
@@ -16,6 +16,7 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [addresses, setAddresses] = useState([]);
   const [activeTab, setActiveTab] = useState('orders');
 
   useEffect(() => {
@@ -31,12 +32,14 @@ const UserDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [dashboardRes, ordersRes] = await Promise.all([
-        api.get('/user/dashboard'), // Assuming this exists or falls back
-        api.get('/user/orders')
+      const [dashboardRes, ordersRes, profileRes] = await Promise.all([
+        api.get('/dashboard'), // Assuming this exists or falls back
+        api.get('/user/orders'),
+        api.get('/user/profile')
       ]);
-      setData(dashboardRes.data);
-      setOrders(ordersRes.data.data || []);
+      setData(dashboardRes.data.data || dashboardRes.data);
+      setOrders(ordersRes.data.data?.data || ordersRes.data.data || []);
+      setAddresses(profileRes.data?.data?.addresses || []);
     } catch (error) {
       console.error("User Data Error", error);
     } finally {
@@ -69,7 +72,7 @@ const UserDashboard = () => {
   const stats = data?.stats || { total_orders: 0, pending_orders: 0, completed_orders: 0, total_spent: 0 };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20" data-active-tab={activeTab}>
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-xl sticky top-0 z-30 px-8 py-4 flex justify-between items-center shadow-sm border-b border-gray-100">
         <div>
@@ -77,18 +80,37 @@ const UserDashboard = () => {
           <p className="text-xs text-gray-500">Welcome back, {user.name}</p>
         </div>
         <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-md">
-          {user.name[0]}
+          {user.name?.[0] || 'U'}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
+      {activeTab === 'addresses' && (
+        <section className="max-w-7xl mx-auto px-8 pt-8">
+          <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900">Saved delivery addresses</h2>
+            <p className="mt-1 text-sm text-gray-500">Addresses you have used for previous orders.</p>
+            {addresses.length ? (
+              <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {addresses.map(address => (
+                  <article key={address.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <p className="font-semibold text-gray-900">{address.address_line_1}</p>
+                    {address.address_line_2 && <p className="mt-1 text-sm text-gray-600">{address.address_line_2}</p>}
+                    <p className="mt-1 text-sm text-gray-600">{[address.city, address.state, address.zip_code, address.country].filter(Boolean).join(', ')}</p>
+                  </article>
+                ))}
+              </div>
+            ) : <p className="mt-5 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">No saved addresses yet. Your address will be saved during checkout.</p>}
+          </div>
+        </section>
+      )}
+      <div className={activeTab === 'addresses' ? 'hidden' : 'max-w-7xl mx-auto p-8 space-y-8'}>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard title="Total Orders" value={stats.total_orders} icon={<FiPackage />} gradient="bg-gradient-to-br from-indigo-500 to-blue-600" delay={0.1} />
           <StatCard title="Pending" value={stats.pending_orders} icon={<FiClock />} gradient="bg-gradient-to-br from-orange-400 to-pink-500" delay={0.2} />
           <StatCard title="Completed" value={stats.completed_orders} icon={<FiCheckCircle />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" delay={0.3} />
-          <StatCard title="Total Spent" value={`$${stats.total_spent}`} icon={<FiShoppingBag />} gradient="bg-gradient-to-br from-violet-500 to-purple-600" delay={0.4} />
+          <StatCard title="Total Spent" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(stats.total_spent || 0))} icon={<FiShoppingBag />} gradient="bg-gradient-to-br from-violet-500 to-purple-600" delay={0.4} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -98,7 +120,7 @@ const UserDashboard = () => {
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-800">Recent Orders</h2>
-                <button className="text-indigo-600 text-sm font-semibold hover:underline">View All</button>
+                <Link to="/user/orders" className="text-indigo-600 text-sm font-semibold hover:underline">View All</Link>
               </div>
 
               <div className="space-y-4">
@@ -114,12 +136,12 @@ const UserDashboard = () => {
                       </div>
                       <div>
                         <p className="font-bold text-gray-900">Order #{order.id}</p>
-                        <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString()} • {order.order_items?.length || 0} items</p>
+                        <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString()} • {order.items?.length || order.order_items?.length || 0} items</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">${order.total_amount}</p>
-                      <span className={`text-xs px-2 py-1 rounded-full font-bold ${order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                      <p className="font-bold text-gray-900">₹{Number(order.total_amount || 0).toLocaleString("en-IN")}</p>
+                      <span className={`text-xs px-2 py-1 rounded-full font-bold ${order.status === 'delivered' ? 'bg-green-100 text-green-700' :
                         order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'
                         }`}>
                         {order.status}
@@ -141,7 +163,7 @@ const UserDashboard = () => {
               <div className="flex flex-col items-center mb-8">
                 <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 p-1 mb-4">
                   <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
-                    <span className="text-3xl font-bold text-gray-800">{user.name[0]}</span>
+                    <span className="text-3xl font-bold text-gray-800">{(user.name || 'U')[0]}</span>
                   </div>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">{user.name}</h3>
@@ -149,18 +171,18 @@ const UserDashboard = () => {
               </div>
 
               <div className="space-y-3">
-                <button className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                <Link to="/profile" className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex items-center gap-3 text-gray-700 font-medium">
                     <FiUser /> Edit Profile
                   </div>
                   <span className="text-gray-400">→</span>
-                </button>
-                <button className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                </Link>
+                <Link to="/user/addresses" className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex items-center gap-3 text-gray-700 font-medium">
                     <FiMapPin /> Addresses
                   </div>
                   <span className="text-gray-400">→</span>
-                </button>
+                </Link>
               </div>
             </div>
           </div>

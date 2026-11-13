@@ -1,121 +1,115 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const AuthContext = createContext({
     user: null,
     token: null,
-    login: async () => { },
-    register: async () => { },
-    logout: async () => { },
+    login: async () => {},
+    register: async () => {},
+    logout: async () => {},
     loading: true,
-    updateUser: () => { }
+    updateUser: () => {},
 });
+
+const getDashboardPath = (user) => {
+    const roles = user?.roles || [];
+    const roleNames = roles.map((role) => typeof role === 'string' ? role : role.name);
+    if (roleNames.includes('super_admin')) return '/super-admin';
+    if (roleNames.includes('admin')) return '/admin';
+    if (roleNames.includes('seller')) return '/seller/dashboard';
+    return '/dashboard';
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('token'));
+    const [token, setToken] = useState(() => localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
+    const clearSession = useCallback(() => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+    }, []);
+
     useEffect(() => {
-        if (token) {
-            // Validate token and fetch user
-            api.defaults.headers.Authorization = `Bearer ${token}`;
-            api.get('/user')
-                .then(res => {
-                    const userData = res.data.data;
-                    setUser(userData);
-                    localStorage.setItem('user', JSON.stringify(userData));
-                    // Auto-redirect based on role
-                    const userRole = userData.roles?.[0]?.name;
-                    if (userRole) {
-                        switch (userRole) {
-                            case 'super_admin':
-                                navigate('/super-admin');
-                                break;
-                            case 'admin':
-                                navigate('/admin');
-                                break;
-                            case 'seller':
-                                navigate('/seller/dashboard');
-                                break;
-                            case 'user':
-                                navigate('/dashboard');
-                                break;
-                            default:
-                                navigate('/');
-                        }
-                    }
-                })
-                .catch(() => {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    setToken(null);
-                    setUser(null);
-                })
-                .finally(() => setLoading(false));
-        } else {
-            setLoading(false);
-        }
-    }, [token, navigate]);
+        let active = true;
+
+        const handleUnauthorized = () => {
+            if (!active) return;
+            clearSession();
+        };
+
+        window.addEventListener('auth:unauthorized', handleUnauthorized);
+
+        const restoreSession = async () => {
+            const storedToken = localStorage.getItem('token');
+            if (!storedToken) {
+                if (active) setLoading(false);
+                return;
+            }
+
+            try {
+                const response = await api.get('/user');
+                if (!active) return;
+                const userData = response.data?.data;
+                if (!userData) throw new Error('Invalid user response');
+                setUser(userData);
+                setToken(storedToken);
+                localStorage.setItem('user', JSON.stringify(userData));
+            } catch {
+                if (active) clearSession();
+            } finally {
+                if (active) setLoading(false);
+            }
+        };
+
+        restoreSession();
+
+        return () => {
+            active = false;
+            window.removeEventListener('auth:unauthorized', handleUnauthorized);
+        };
+    }, [clearSession]);
 
     const login = async (email, password) => {
-        const res = await api.post('/login', { email, password });
-        if (res.data.success) {
-            localStorage.setItem('token', res.data.data.token);
-            localStorage.setItem('user', JSON.stringify(res.data.data.user));
-            setToken(res.data.data.token);
-            setUser(res.data.data.user);
-            
-            // Redirect based on role
-            const userRole = res.data.data.user.roles?.[0]?.name;
-            if (userRole) {
-                switch (userRole) {
-                    case 'super_admin':
-                        navigate('/super-admin');
-                        break;
-                    case 'admin':
-                        navigate('/admin');
-                        break;
-                    case 'seller':
-                        navigate('/seller/dashboard');
-                        break;
-                    case 'user':
-                        navigate('/dashboard');
-                        break;
-                    default:
-                        navigate('/');
-                }
-            }
-            
-            return res.data;
+        const response = await api.post('/login', { email, password });
+        if (!response.data?.success || !response.data?.data?.token || !response.data?.data?.user) {
+            throw new Error(response.data?.message || 'Unable to sign in.');
         }
+
+        const { token: accessToken, user: userData } = response.data.data;
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setToken(accessToken);
+        setUser(userData);
+        navigate(getDashboardPath(userData), { replace: true });
+        return response.data;
     };
 
     const register = async (data) => {
-        const res = await api.post('/register', data);
-        if (res.data.success) {
-            localStorage.setItem('token', res.data.data.token);
-            localStorage.setItem('user', JSON.stringify(res.data.data.user));
-            setToken(res.data.data.token);
-            setUser(res.data.data.user);
-            navigate('/dashboard');
-            return res.data;
+        const response = await api.post('/register', data);
+        if (!response.data?.success || !response.data?.data?.token || !response.data?.data?.user) {
+            throw new Error(response.data?.message || 'Unable to create your account.');
         }
+
+        const { token: accessToken, user: userData } = response.data.data;
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setToken(accessToken);
+        setUser(userData);
+        navigate(getDashboardPath(userData), { replace: true });
+        return response.data;
     };
 
     const logout = async () => {
         try {
-            await api.post('/logout');
-        } catch (e) {
-            console.error(e);
+            if (localStorage.getItem('token')) await api.post('/logout');
         } finally {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setToken(null);
-            setUser(null);
-            navigate('/login');
+            clearSession();
+            navigate('/login', { replace: true });
         }
     };
 
@@ -126,4 +120,5 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

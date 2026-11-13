@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiEye, FiFilter, FiDownload, FiUpload, FiPackage, FiUsers, FiShoppingCart, FiTrendingUp, FiDollarSign, FiAlertCircle, FiCheckCircle, FiXCircle, FiClock, FiUserPlus, FiShield, FiSettings, FiRefreshCw, FiGrid, FiUser, FiUserCheck, FiActivity, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,7 +14,10 @@ import api from '../../services/api';
 import './SuperAdminDashboard.css';
 
 const SuperAdminDashboard = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
+  const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [users, setUsers] = useState([]);
   const [sellers, setSellers] = useState([]);
@@ -31,6 +35,17 @@ const SuperAdminDashboard = () => {
     role: 'admin',
     status: 'active'
   });
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.endsWith('/admins')) setActiveTab('admins');
+    else if (path.endsWith('/users')) setActiveTab('users');
+    else if (path.endsWith('/sellers')) setActiveTab('sellers');
+    else if (path.endsWith('/orders')) setActiveTab('orders');
+    else if (path.endsWith('/products')) setActiveTab('products');
+    else if (path.endsWith('/settings')) setActiveTab('system');
+    else setActiveTab('overview');
+  }, [location.pathname]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -51,7 +66,9 @@ const SuperAdminDashboard = () => {
         api.get('/super-admin/dashboard'),
         api.get('/super-admin/admins'),
         api.get('/super-admin/users'),
-        api.get('/super-admin/sellers')
+        api.get('/super-admin/sellers'),
+        api.get('/super-admin/orders'),
+        api.get('/super-admin/products')
       ]);
 
       // Handle each result separately
@@ -59,6 +76,8 @@ const SuperAdminDashboard = () => {
       const adminsResult = results[1];
       const usersResult = results[2];
       const sellersResult = results[3];
+      const ordersResult = results[4];
+      const productsResult = results[5];
 
       // Set fallback data if API calls fail
       let dashboardData = {
@@ -114,6 +133,8 @@ const SuperAdminDashboard = () => {
       setAdmins(adminsData || []);
       setUsers(usersData || []);
       setSellers(sellersData || []);
+      setOrders(ordersResult.status === 'fulfilled' ? (ordersResult.value.data?.data?.data || ordersResult.value.data?.data || []) : []);
+      setProducts(productsResult.status === 'fulfilled' ? (productsResult.value.data?.data?.data || productsResult.value.data?.data || []) : []);
 
       console.log('Super Admin Dashboard Data:', dashboardData);
       console.log('Admins:', adminsData);
@@ -137,79 +158,54 @@ const SuperAdminDashboard = () => {
   const handleAddAdmin = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/super-admin/admins', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
+      await api.post('/super-admin/admins', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
       });
-
-      if (response.ok) {
-        setShowAddAdminModal(false);
-        setFormData({ name: '', email: '', password: '', role: 'admin', status: 'active' });
-        fetchDashboardData();
-      }
+      setShowAddAdminModal(false);
+      setFormData({ name: '', email: '', password: '', role: 'admin', status: 'active' });
+      await fetchDashboardData();
     } catch (error) {
-      console.error('Error adding admin:', error);
+      window.alert(error.response?.data?.message || 'Unable to create administrator.');
     }
   };
 
   const handleEditAdmin = async (e) => {
     e.preventDefault();
+    if (!selectedAdmin) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/super-admin/admins/${selectedAdmin.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
+      await api.put('/super-admin/admins/' + selectedAdmin.id, {
+        name: formData.name,
+        email: formData.email,
+        ...(formData.password ? { password: formData.password } : {}),
+        status: formData.status,
       });
-
-      if (response.ok) {
-        setShowEditAdminModal(false);
-        setSelectedAdmin(null);
-        setFormData({ name: '', email: '', password: '', role: 'admin', status: 'active' });
-        fetchDashboardData();
-      }
+      setShowEditAdminModal(false);
+      setSelectedAdmin(null);
+      setFormData({ name: '', email: '', password: '', role: 'admin', status: 'active' });
+      await fetchDashboardData();
     } catch (error) {
-      console.error('Error updating admin:', error);
+      window.alert(error.response?.data?.message || 'Unable to update administrator.');
     }
   };
 
   const handleDeleteAdmin = async (adminId) => {
-    if (window.confirm('Are you sure you want to delete this admin?')) {
-      try {
-        const token = localStorage.getItem('token');
-        await fetch(`/api/super-admin/admins/${adminId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          }
-        });
-        fetchDashboardData();
-      } catch (error) {
-        console.error('Error deleting admin:', error);
-      }
+    if (!window.confirm('Delete this administrator account?')) return;
+    try {
+      await api.delete('/super-admin/admins/' + adminId);
+      await fetchDashboardData();
+    } catch (error) {
+      window.alert(error.response?.data?.message || 'Unable to delete administrator.');
     }
   };
 
   const handleVerifySeller = async (sellerId) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`/api/super-admin/sellers/${sellerId}/approve`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
-      fetchDashboardData();
+      await api.patch('/super-admin/sellers/' + sellerId + '/approve');
+      await fetchDashboardData();
     } catch (error) {
-      console.error('Error verifying seller:', error);
+      window.alert(error.response?.data?.message || 'Unable to approve seller.');
     }
   };
 
@@ -362,7 +358,7 @@ const SuperAdminDashboard = () => {
 
         {/* Navigation Tabs (Pill Shape) */}
         <div className="flex space-x-2 bg-white/60 p-1.5 rounded-2xl w-fit backdrop-blur-md border border-gray-200/50 shadow-sm mx-auto lg:mx-0">
-          {['overview', 'admins', 'users', 'sellers', 'system'].map((tab) => (
+          {['overview', 'admins', 'users', 'sellers', 'orders', 'products', 'system'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -449,6 +445,27 @@ const SuperAdminDashboard = () => {
                 </div>
               )}
 
+
+              {activeTab === 'orders' && (
+                <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
+                  <div className="border-b border-gray-100 p-6"><h3 className="text-xl font-bold text-gray-900">All platform orders</h3><p className="mt-1 text-sm text-gray-500">Read-only global order oversight.</p></div>
+                  <div className="overflow-x-auto"><table className="w-full text-left">
+                    <thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-6 py-4">Order</th><th className="px-6 py-4">Customer</th><th className="px-6 py-4">Amount</th><th className="px-6 py-4">Payment</th><th className="px-6 py-4">Status</th></tr></thead>
+                    <tbody className="divide-y divide-gray-100">{orders.map(order => <tr key={order.id}><td className="px-6 py-4 font-semibold">#{order.id}</td><td className="px-6 py-4">{order.user?.name || 'Customer'}</td><td className="px-6 py-4">₹{Number(order.total_amount || 0).toLocaleString('en-IN')}</td><td className="px-6 py-4 capitalize">{order.payment_status || '—'}</td><td className="px-6 py-4 capitalize">{order.status}</td></tr>)}</tbody>
+                  </table>{!orders.length && <p className="p-8 text-center text-sm text-gray-500">No orders found.</p>}</div>
+                </div>
+              )}
+
+              {activeTab === 'products' && (
+                <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
+                  <div className="border-b border-gray-100 p-6"><h3 className="text-xl font-bold text-gray-900">All platform products</h3><p className="mt-1 text-sm text-gray-500">Global catalogue monitoring across sellers.</p></div>
+                  <div className="overflow-x-auto"><table className="w-full text-left">
+                    <thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-6 py-4">Product</th><th className="px-6 py-4">Seller</th><th className="px-6 py-4">Category</th><th className="px-6 py-4">Price</th><th className="px-6 py-4">Stock</th></tr></thead>
+                    <tbody className="divide-y divide-gray-100">{products.map(product => <tr key={product.id}><td className="px-6 py-4 font-semibold">{product.name}</td><td className="px-6 py-4">{product.seller?.name || '—'}</td><td className="px-6 py-4">{product.category?.name || '—'}</td><td className="px-6 py-4">₹{Number(product.price || 0).toLocaleString('en-IN')}</td><td className="px-6 py-4">{product.stock ?? 0}</td></tr>)}</tbody>
+                  </table>{!products.length && <p className="p-8 text-center text-sm text-gray-500">No products found.</p>}</div>
+                </div>
+              )}
+
               {/* Data Tables (Reusable Structure for Admins, Users, Sellers) */}
               {['admins', 'users', 'sellers'].includes(activeTab) && (
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
@@ -465,6 +482,11 @@ const SuperAdminDashboard = () => {
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                         />
+                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} aria-label="Filter admins by status" className="ml-2 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700">
+                          <option value="all">All statuses</option>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
                       </div>
 
                       {activeTab === 'admins' && (
@@ -504,7 +526,7 @@ const SuperAdminDashboard = () => {
                             <td className="px-6 py-4 text-sm text-gray-600">{admin.email}</td>
                             <td className="px-6 py-4">
                               <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-medium border border-purple-100">
-                                {admin.roles?.[0]?.name}
+                                {admin.roles?.[0]?.name || admin.role || admin.user_type || 'admin'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
@@ -532,8 +554,8 @@ const SuperAdminDashboard = () => {
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
                             <td className="px-6 py-4 text-sm text-gray-800 font-medium">{user.orders_count || 0}</td>
-                            <td className="px-6 py-4 text-sm text-gray-800 font-medium">${user.total_spent || 0}</td>
-                            <td className="px-6 py-4 text-xs text-gray-400">{new Date(user.created_at).toLocaleDateString()}</td>
+                            <td className="px-6 py-4 text-sm text-gray-800 font-medium">₹${Number(user.total_spent || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-6 py-4 text-xs text-gray-400">{new Date(user.created_at).toLocaleDateString('en-IN')}</td>
                           </tr>
                         ))}
 
@@ -589,7 +611,6 @@ const SuperAdminDashboard = () => {
               <input type="password" placeholder="Password" required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-purple-500 outline-none transition-all" />
               <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-purple-500 outline-none transition-all">
                 <option value="admin">Admin</option>
-                <option value="super_admin">Super Admin</option>
               </select>
               <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-purple-500 outline-none transition-all">
                 <option value="active">Active</option>
